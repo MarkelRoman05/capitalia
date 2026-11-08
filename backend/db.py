@@ -82,16 +82,16 @@ def _cfg():
                 return env_infra[c]
         return defecto
 
-    host = obt("CAPITALIA_DB_HOST", "RUMBO_DB_HOST", "POSTGRES_HOST")
-    user = obt("CAPITALIA_DB_USER", "RUMBO_DB_USER", "POSTGRES_USER")
-    password = obt("CAPITALIA_DB_PASSWORD", "RUMBO_DB_PASSWORD", "POSTGRES_PASSWORD")
+    host = obt("CAPITALIA_DB_HOST", "POSTGRES_HOST")
+    user = obt("CAPITALIA_DB_USER", "POSTGRES_USER")
+    password = obt("CAPITALIA_DB_PASSWORD", "POSTGRES_PASSWORD")
     if not host and user and password:
         host = "127.0.0.1"
     if not host:
         return None
     return {
         "host": host,
-        "port": obt("CAPITALIA_DB_PORT", "RUMBO_DB_PORT", defecto="5432"),
+        "port": obt("CAPITALIA_DB_PORT", defecto="5432"),
         "dbname": obt("CAPITALIA_DB_NAME", defecto="capitalia"),
         "user": user or "postgres",
         "password": password or "",
@@ -210,61 +210,12 @@ def _crea_tablas():
         con.commit()
 
 
-def _migrar_desde_rumbo_si_vacio():
-    """Si la tabla de usuarios de Capitalia está vacía y existe la BD rumbo, importa sus cuentas y carteras."""
-    try:
-        with _conectar() as con, con.cursor() as cur:
-            cur.execute("SELECT COUNT(*) AS n FROM usuarios")
-            if (cur.fetchone() or {}).get("n", 0) > 0:
-                return
-        with _conectar("rumbo") as con_r, con_r.cursor() as cur_r:
-            cur_r.execute("SELECT id, email, nombre, password_hash, creado, ultimo_acceso FROM usuarios ORDER BY id")
-            usuarios_rumbo = cur_r.fetchall()
-        if not usuarios_rumbo:
-            return
-        raiz = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        dir_rumbo_usuarios = os.path.abspath(os.path.join(raiz, "..", "rumbo", "mis_datos", "usuarios"))
-        with _conectar() as con, con.cursor() as cur:
-            for u in usuarios_rumbo:
-                cur.execute(
-                    """
-                    INSERT INTO usuarios (id, email, nombre, password_hash, creado, ultimo_acceso)
-                    VALUES (%s, %s, %s, %s, %s, %s)
-                    ON CONFLICT (email) DO NOTHING
-                    """,
-                    (u["id"], u["email"], u["nombre"], u["password_hash"], u["creado"], u["ultimo_acceso"]),
-                )
-                ruta_cartera = os.path.join(dir_rumbo_usuarios, str(u["id"]), "cartera.json")
-                cfg_inicial = json.loads(json.dumps(almacen.CARTERA_VACIA))
-                if os.path.exists(ruta_cartera):
-                    try:
-                        with open(ruta_cartera, "r", encoding="utf-8") as f:
-                            cfg_inicial = json.load(f)
-                    except Exception:
-                        pass
-                cur.execute(
-                    """
-                    INSERT INTO carteras (usuario_id, cfg, estado)
-                    VALUES (%s, %s, %s)
-                    ON CONFLICT (usuario_id) DO NOTHING
-                    """,
-                    (u["id"], Jsonb(cfg_inicial), Jsonb({})),
-                )
-                _sincronizar_relacional(cur, u["id"], cfg_inicial)
-            cur.execute("SELECT setval(pg_get_serial_sequence('usuarios', 'id'), COALESCE((SELECT MAX(id) FROM usuarios), 1))")
-            con.commit()
-    except Exception:
-        # Si rumbo no existe o falla la migración opcional, se ignora silenciosamente.
-        pass
-
-
 def inicia():
     """Crea la base de datos `capitalia` (si no existe) y todas las tablas. Idempotente."""
     if not activo():
         return
     try:
         _crea_tablas()
-        _migrar_desde_rumbo_si_vacio()
         return
     except psycopg.OperationalError as e:
         if "does not exist" not in str(e).lower():
@@ -275,7 +226,6 @@ def inicia():
     with _conectar("postgres", autocommit=True) as con, con.cursor() as cur:
         cur.execute(sql.SQL("CREATE DATABASE {}").format(sql.Identifier(nombre)))
     _crea_tablas()
-    _migrar_desde_rumbo_si_vacio()
 
 
 # ---------------------------------------------------------------- usuarios
