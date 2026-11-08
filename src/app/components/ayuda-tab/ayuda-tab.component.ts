@@ -14,17 +14,16 @@ interface PreguntaAyuda {
         <span class="hero-kicker">Guía rápida</span>
         <h2 class="card-title">Cómo funciona Capitalia</h2>
         <p class="card-sub" style="margin-bottom: 1.25rem">
-          Capitalia combina un motor cuantitativo en Python con persistencia relacional en PostgreSQL y una interfaz reactiva en Angular 22.
+          Capitalia es un gestor patrimonial personal que te permite anotar tus compras y ventas de
+          fondos, ETFs, acciones, criptomonedas, cuentas remuneradas, efectivo, inmuebles y
+          préstamos hipotecarios. Calcula automáticamente tu rentabilidad total, TIR y TWR y genera
+          gráficos de evolución.
         </p>
 
         <div class="faq-lista">
           @for (item of preguntas; track item.id) {
             <div class="faq-item" [class.abierto]="abierta() === item.id">
-              <button
-                type="button"
-                class="faq-pregunta"
-                (click)="alternar(item.id)"
-              >
+              <button type="button" class="faq-pregunta" (click)="alternar(item.id)">
                 <span>{{ item.pregunta }}</span>
                 <span class="faq-icono">{{ abierta() === item.id ? '−' : '+' }}</span>
               </button>
@@ -60,7 +59,9 @@ interface PreguntaAyuda {
               </tr>
               <tr>
                 <td><kbd>V</kbd></td>
-                <td>Activar / desactivar el Modo Vídeo / Presentación (oculta controles de edición)</td>
+                <td>
+                  Activar / desactivar el Modo Vídeo / Presentación (oculta controles de edición)
+                </td>
               </tr>
               <tr>
                 <td><kbd>L</kbd></td>
@@ -82,7 +83,10 @@ interface PreguntaAyuda {
           <span class="hero-kicker">Tus datos</span>
           <h2 class="card-title">Tus datos en PostgreSQL</h2>
           <p class="card-sub">
-            Toda tu cartera, historial diario de patrimonio, puntos de restauración automáticos y tablas relacionales de productos, movimientos y valoraciones se almacenan en tu base de datos PostgreSQL local del servidor, protegidos con sesiones firmadas y contraseñas cifradas con PBKDF2-HMAC-SHA256.
+            Toda tu cartera, historial diario de patrimonio, puntos de restauración automáticos y
+            tablas relacionales de productos, movimientos y valoraciones se almacenan en tu base de
+            datos PostgreSQL local del servidor, protegidos con sesiones firmadas y contraseñas
+            cifradas con PBKDF2-HMAC-SHA256.
           </p>
         </section>
       </div>
