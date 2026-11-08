@@ -729,9 +729,9 @@ export class PatrimonioTabComponent {
   constructor() {
     effect(() => {
       const d = this.store.datos();
-      if (d && !this.proyInicializado) {
+      if (d?.total && !this.proyInicializado && !this.store.carteraVacia()) {
         this.proyInicializado = true;
-        const ritmoRedondeado = Math.round((d.total.ritmoMensual || 300) / 50) * 50;
+        const ritmoRedondeado = Math.round((d.total?.ritmoMensual || 300) / 50) * 50;
         this.proyAport.set(Math.min(4000, Math.max(0, ritmoRedondeado)));
       }
     });
@@ -786,7 +786,7 @@ export class PatrimonioTabComponent {
 
   readonly estimacionObjetivoTexto = computed<string>(() => {
     const falta = this.faltaObjetivo();
-    const ritmo = this.store.datos()?.total.ritmoMensual || 0;
+    const ritmo = this.store.datos()?.total?.ritmoMensual || 0;
     if (falta <= 0 || ritmo <= 0) return '';
     const meses = Math.ceil(falta / ritmo);
     if (meses < 12) return `~${meses} meses al ritmo actual`;

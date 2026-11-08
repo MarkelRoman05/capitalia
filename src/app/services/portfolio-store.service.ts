@@ -537,8 +537,39 @@ export class PortfolioStoreService {
 
   // Portfolio & Dashboard API calls
   async cargarPanel(): Promise<void> {
-    const panel = await firstValueFrom(this.http.get<DatosPanel>('/api/panel'));
-    this.aplicarNuevoPanel(panel);
+    const resp = await firstValueFrom(
+      this.http.get<
+        | {
+            ok?: boolean;
+            modo?: 'propio' | 'demo' | 'estatico';
+            datos?: DatosPanel | null;
+            panel?: DatosPanel | null;
+            cartera?: CarteraConfig;
+            tipos?: Record<string, [string, string]>;
+            fuentes?: string[];
+            tiposMovimiento?: string[];
+          }
+        | DatosPanel
+      >('/api/panel')
+    );
+    if (resp && typeof resp === 'object' && ('ok' in resp || 'datos' in resp || 'cartera' in resp)) {
+      const env = resp as {
+        modo?: 'propio' | 'demo' | 'estatico';
+        datos?: DatosPanel | null;
+        panel?: DatosPanel | null;
+        cartera?: CarteraConfig;
+        tipos?: Record<string, [string, string]>;
+        fuentes?: string[];
+        tiposMovimiento?: string[];
+      };
+      if (env.cartera) this.cartera.set(env.cartera);
+      if (env.tipos) this.tipos.set(env.tipos);
+      if (env.fuentes) this.fuentes.set(env.fuentes);
+      if (env.tiposMovimiento) this.tiposMovimiento.set(env.tiposMovimiento);
+      this.aplicarNuevoPanel(env.datos ?? env.panel ?? null, env.modo, env.cartera?.titular);
+    } else {
+      this.aplicarNuevoPanel(resp as DatosPanel | null);
+    }
   }
 
   async cargarCarteraConfig(): Promise<void> {
@@ -557,7 +588,84 @@ export class PortfolioStoreService {
     this.tiposMovimiento.set(resp.tiposMovimiento || []);
   }
 
-  private aplicarNuevoPanel(panel: DatosPanel): void {
+  private crearPanelVacio(
+    modo: 'propio' | 'demo' | 'estatico' = 'propio',
+    titular = 'Mi cartera'
+  ): DatosPanel {
+    const hoyIso = new Date().toISOString().slice(0, 10);
+    return {
+      generado: hoyIso,
+      modo,
+      preciosActualizados: null,
+      titular,
+      moneda: 'EUR',
+      fechaExtracto: hoyIso,
+      fechas: [],
+      productos: [],
+      otrosActivos: [],
+      pasivos: [],
+      total: {
+        patrimonio: 0,
+        aportado: 0,
+        valorConCoste: 0,
+        plusvalia: 0,
+        rentabilidad: null,
+        tir: null,
+        realizado: 0,
+        serie: [],
+        serieAportado: [],
+        porClase: [],
+        porEntidad: [],
+        porTipo: [],
+        hitos: [],
+        racha: 0,
+        ritmoMensual: 0,
+        numAportaciones: 0,
+        diasInvertido: 0,
+        caidaMaxima: 0,
+        caidaMaximaFecha: null,
+      },
+      aportacionesMensuales: {
+        meses: [],
+        porProducto: {},
+        total: [],
+      },
+      objetivo: null,
+      comisiones: {
+        lineas: [],
+        anual: 0,
+        base: 0,
+        terPonderado: null,
+        compraventaPagada: 0,
+      },
+      rentabilidadAnual: {
+        anos: [],
+        cartera: [],
+        parcial: [],
+        porProducto: {},
+        desde: {},
+      },
+      resumenMensual: [],
+      comparador: [],
+      comparacion: null,
+      indiceCartera: [],
+      vivo: null,
+      avisos: [],
+    };
+  }
+
+  private aplicarNuevoPanel(
+    rawPanel: DatosPanel | null | undefined,
+    modoFallback: 'propio' | 'demo' | 'estatico' = 'propio',
+    titularFallback?: string
+  ): void {
+    const panel =
+      rawPanel && rawPanel.total
+        ? rawPanel
+        : this.crearPanelVacio(
+            rawPanel?.modo || modoFallback,
+            rawPanel?.titular || titularFallback || this.cartera()?.titular || 'Mi cartera'
+          );
     this.datos.set(panel);
     if (panel.productos?.length && !this.productoSeleccionadoId()) {
       this.productoSeleccionadoId.set(panel.productos[0].id);
@@ -575,6 +683,8 @@ export class PortfolioStoreService {
       ) {
         this.mesSeleccionadoIdx.set(panel.resumenMensual.length - 1);
       }
+    } else {
+      this.mesSeleccionadoIdx.set(-1);
     }
 
     this.iniciarPollingVivo();
@@ -634,11 +744,9 @@ export class PortfolioStoreService {
     this.actualizandoPrecios.set(true);
     try {
       const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>('/api/actualizar', {})
+        this.http.post<{ ok: boolean; panel: DatosPanel | null }>('/api/actualizar', {})
       );
-      if (resp.panel) {
-        this.aplicarNuevoPanel(resp.panel);
-      }
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Precios de mercado y series históricas actualizados.');
     } catch (err: unknown) {
@@ -665,7 +773,7 @@ export class PortfolioStoreService {
           activo,
         })
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Objetivo de patrimonio actualizado.');
       return true;
@@ -686,7 +794,7 @@ export class PortfolioStoreService {
           {}
         )
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Cartera de ejemplo cargada.');
     } catch (err: unknown) {
@@ -703,7 +811,7 @@ export class PortfolioStoreService {
       const resp = await firstValueFrom(
         this.http.post<{ ok: boolean; panel: DatosPanel }>('/api/empezar', {})
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.tabActiva.set('datos');
       this.notificarExito('Tu cartera personal está lista para editar.');
@@ -719,7 +827,7 @@ export class PortfolioStoreService {
       const resp = await firstValueFrom(
         this.http.post<{ ok: boolean; panel: DatosPanel }>('/api/reiniciar', {})
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito(
         'Cartera vaciada (se ha guardado copia de seguridad previa).'
@@ -756,7 +864,7 @@ export class PortfolioStoreService {
             prod
           );
       const resp = await firstValueFrom(obs);
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito(
         idExistente ? 'Producto actualizado.' : 'Producto añadido a la cartera.'
@@ -777,7 +885,7 @@ export class PortfolioStoreService {
           `/api/productos/${encodeURIComponent(id)}`
         )
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Producto eliminado.');
       return true;
@@ -797,7 +905,7 @@ export class PortfolioStoreService {
           {}
         )
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Colores repartidos automáticamente.');
     } catch (err: unknown) {
@@ -823,7 +931,7 @@ export class PortfolioStoreService {
             mov
           );
       const resp = await firstValueFrom(obs);
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito(
         idExistente ? 'Movimiento actualizado.' : 'Movimiento registrado.'
@@ -844,7 +952,7 @@ export class PortfolioStoreService {
           `/api/movimientos/${encodeURIComponent(id)}`
         )
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Movimiento eliminado.');
       return true;
@@ -874,7 +982,7 @@ export class PortfolioStoreService {
             val
           );
       const resp = await firstValueFrom(obs);
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Saldos guardados correctamente.');
       return true;
@@ -893,7 +1001,7 @@ export class PortfolioStoreService {
           `/api/valoraciones/${encodeURIComponent(id)}`
         )
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Saldo eliminado.');
       return true;
@@ -936,7 +1044,7 @@ export class PortfolioStoreService {
           panel: DatosPanel;
         }>('/api/importar/confirmar', payload)
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Importación completada con éxito.');
       return resp.informe;
@@ -973,7 +1081,7 @@ export class PortfolioStoreService {
           contenido,
         })
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await Promise.all([this.cargarCarteraConfig(), this.cargarCopias()]);
       this.notificarExito('Copia de seguridad restaurada.');
       return true;
@@ -993,7 +1101,7 @@ export class PortfolioStoreService {
           { archivo }
         )
       );
-      if (resp.panel) this.aplicarNuevoPanel(resp.panel);
+      this.aplicarNuevoPanel(resp.panel ?? null);
       await Promise.all([this.cargarCarteraConfig(), this.cargarCopias()]);
       this.notificarExito('Copia automática restaurada.');
       return true;
