@@ -409,10 +409,10 @@ interface ArchivoLeido {
               </p>
               <div class="header-btns" style="margin: 1rem 0">
                 <a href="/api/plantilla.xlsx" download class="btn-secundario btn-sm">
-                  ⬇ Descargar Plantilla Excel (.xlsx)
+                  Descargar Plantilla Excel (.xlsx)
                 </a>
                 <a href="/api/plantilla.csv" download class="btn-fantasma btn-sm">
-                  ⬇ Descargar Plantilla CSV (.csv)
+                  Descargar Plantilla CSV (.csv)
                 </a>
               </div>
               <div class="campo">
@@ -436,7 +436,7 @@ interface ArchivoLeido {
               </p>
               <div class="ia-prompt-bar">
                 <button type="button" class="btn-secundario btn-sm" (click)="copiarPromptIA()">
-                  📋 Copiar instrucciones para la IA
+                  Copiar instrucciones para la IA
                 </button>
                 @if (promptCopiado()) {
                   <span class="pos mono">¡Instrucciones copiadas al portapapeles!</span>
@@ -559,10 +559,10 @@ interface ArchivoLeido {
             </p>
             <div class="header-btns" style="margin-top: 1.25rem">
               <a href="/api/copia/descargar" download class="btn-primario">
-                ⬇ Descargar cartera (.json)
+                Descargar cartera (.json)
               </a>
               <label class="btn-secundario" style="cursor: pointer">
-                ⬆ Restaurar desde archivo (.json)
+                Restaurar desde archivo (.json)
                 <input
                   type="file"
                   accept=".json"
@@ -588,7 +588,7 @@ interface ArchivoLeido {
                 download
                 class="btn-secundario"
               >
-                🌐 Descargar página web interactiva (.html)
+                Descargar página web interactiva (.html)
               </a>
             </div>
           </section>

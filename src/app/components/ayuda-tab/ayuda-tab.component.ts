@@ -11,7 +11,7 @@ interface PreguntaAyuda {
   template: `
     <div class="dos-columnas bloque-seccion">
       <section class="panel-card">
-        <span class="hero-kicker">GUÍA RÁPIDA</span>
+        <span class="hero-kicker">Guía rápida</span>
         <h2 class="card-title">Cómo funciona Capitalia</h2>
         <p class="card-sub" style="margin-bottom: 1.25rem">
           Capitalia combina un motor cuantitativo en Python con persistencia relacional en PostgreSQL y una interfaz reactiva en Angular 22.
@@ -40,7 +40,7 @@ interface PreguntaAyuda {
 
       <div>
         <section class="panel-card bloque-seccion">
-          <span class="hero-kicker">PRODUCTIVIDAD</span>
+          <span class="hero-kicker">Atajos</span>
           <h2 class="card-title">Atajos de teclado</h2>
           <p class="card-sub" style="margin-bottom: 1rem">
             Navega por las pestañas y modos de visualización sin usar el ratón:
@@ -79,7 +79,7 @@ interface PreguntaAyuda {
         </section>
 
         <section class="panel-card">
-          <span class="hero-kicker">ARQUITECTURA Y SEGURIDAD</span>
+          <span class="hero-kicker">Tus datos</span>
           <h2 class="card-title">Tus datos en PostgreSQL</h2>
           <p class="card-sub">
             Toda tu cartera, historial diario de patrimonio, puntos de restauración automáticos y tablas relacionales de productos, movimientos y valoraciones se almacenan en tu base de datos PostgreSQL local del servidor, protegidos con sesiones firmadas y contraseñas cifradas con PBKDF2-HMAC-SHA256.

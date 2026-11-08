@@ -7,37 +7,22 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
   imports: [FormsModule],
   template: `
     <div class="auth-screen">
-      <div class="auth-backdrop"></div>
+      <section class="auth-pitch">
+        <h1 class="auth-pitch-title">Tu patrimonio, medido con rigor.</h1>
+        <p class="auth-pitch-text">
+          Fondos, ETFs, acciones, cripto, cuentas, inmuebles y deudas en un solo sitio. Rentabilidad real (TIR), plusvalías por FIFO y comparación con un indexado, calculadas sobre tus propias aportaciones.
+        </p>
+        <ul class="auth-pitch-list">
+          <li>Precios históricos de Morningstar, Yahoo Finance y CoinGecko</li>
+          <li>Importa desde MyInvestor, Excel o cualquier banco con IA</li>
+          <li>Tus datos se guardan en tu propia base PostgreSQL</li>
+        </ul>
+      </section>
       <div class="auth-card">
         <div class="auth-brand">
-          <div class="auth-logo">
-            <svg viewBox="0 0 36 36" fill="none" aria-hidden="true">
-              <rect width="36" height="36" rx="9" fill="url(#capGrad)" />
-              <path
-                d="M10 24L16 17L20.5 20.5L26.5 12"
-                stroke="#0a0e14"
-                stroke-width="2.8"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-              />
-              <circle cx="26.5" cy="12" r="2.5" fill="#0a0e14" />
-              <defs>
-                <linearGradient id="capGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
-                  <stop stop-color="#f59e0b" />
-                  <stop offset="1" stop-color="#10b981" />
-                </linearGradient>
-              </defs>
-            </svg>
-          </div>
-          <div>
-            <span class="auth-kicker">GESTIÓN PATRIMONIAL &amp; QUANT</span>
-            <h1 class="auth-title">Capitalia</h1>
-          </div>
+          <span class="auth-title">Capitalia</span>
         </div>
-
-        <p class="auth-sub">
-          Seguimiento integral de patrimonio neto, fondos indexados, ETFs, acciones, cripto, inmuebles y deudas con motor analítico TIR/FIFO y persistencia en PostgreSQL.
-        </p>
+        <p class="auth-sub">Accede a tu cartera o crea una cuenta nueva.</p>
 
         <div class="auth-tabs" role="tablist">
           <button
@@ -108,18 +93,14 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
 
           <button type="submit" class="btn-primario auth-submit" [disabled]="enviando()">
             @if (enviando()) {
-              <span>Verificando...</span>
+              <span>Verificando…</span>
             } @else {
-              <span>{{ modo() === 'login' ? 'Entrar a mi patrimonio' : 'Crear cuenta y empezar' }}</span>
+              <span>{{ modo() === 'login' ? 'Entrar' : 'Crear cuenta' }}</span>
             }
           </button>
         </form>
 
-        <div class="auth-footer">
-          <span>Base de datos PostgreSQL activa</span>
-          <span>·</span>
-          <span>Cifrado PBKDF2-SHA256</span>
-        </div>
+        <p class="auth-footer">Contraseñas cifradas con PBKDF2-SHA256.</p>
       </div>
     </div>
   `,

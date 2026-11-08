@@ -31,7 +31,7 @@ interface FilaAportacionTabla {
       @if (d.modo === 'demo') {
         <div class="aviso-demo">
           <div class="aviso-demo-txt">
-            <span class="badge-demo">MODO DEMO</span>
+            <span class="badge-demo">Demo</span>
             <span>
               Estás explorando una cartera de ejemplo con datos reales de mercado. Cuando quieras, puedes inicializar tu propia cartera en PostgreSQL.
             </span>
@@ -66,10 +66,10 @@ interface FilaAportacionTabla {
         <section class="hero-patrimonio">
           <div class="hero-izq">
             <div class="hero-kicker">
-              <span>{{ store.filtrando() ? 'PATRIMONIO FILTRADO (' + store.visibles().length + ' DE ' + store.todosComponentes().length + ')' : 'PATRIMONIO NETO TOTAL' }}</span>
+              <span>{{ store.filtrando() ? 'Patrimonio filtrado (' + store.visibles().length + ' de ' + store.todosComponentes().length + ')' : 'Patrimonio neto' }}</span>
               @if (ajusteVivoEur() !== 0) {
                 <span class="vivo-pill" title="Cotización cripto en tiempo real">
-                  <span class="vivo-dot"></span> EN VIVO
+                  <span class="vivo-dot"></span> En vivo
                 </span>
               }
             </div>

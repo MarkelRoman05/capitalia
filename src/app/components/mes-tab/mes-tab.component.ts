@@ -31,7 +31,7 @@ interface FilaDetalleMes {
         <section class="panel-card bloque-seccion">
           <div class="mes-header">
             <div>
-              <span class="hero-kicker">RADIOGRAFÍA MENSUAL</span>
+              <span class="hero-kicker">Resumen del mes</span>
               <h2 class="mes-titulo">{{ fmt.mesLargo(m.mes) }}</h2>
             </div>
 
