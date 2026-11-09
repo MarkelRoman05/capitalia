@@ -95,12 +95,12 @@ RUTAS_API_PUBLICAS = {
 
 @app.before_request
 def filtro_seguridad():
-    # Permitir únicamente métodos HTTP necesarios
-    if request.method not in ("GET", "HEAD", "OPTIONS", "POST", "DELETE"):
+    # Permitir únicamente métodos HTTP necesarios (PUT edita registros en /api/<coleccion>/<id>)
+    if request.method not in ("GET", "HEAD", "OPTIONS", "POST", "PUT", "DELETE"):
         return jsonify(ok=False, errores=["Método HTTP no permitido."]), 405
 
     # Protección CSRF en todas las peticiones mutadoras a /api/
-    if request.path.startswith("/api/") and request.method in ("POST", "DELETE"):
+    if request.path.startswith("/api/") and request.method in ("POST", "PUT", "DELETE"):
         csrf_hdr = request.headers.get("X-Capitalia-CSRF") or request.headers.get("X-Requested-With")
         origin = request.headers.get("Origin") or ""
         host_url = request.host_url.rstrip("/")

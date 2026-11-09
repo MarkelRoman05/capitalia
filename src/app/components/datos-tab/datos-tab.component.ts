@@ -124,13 +124,13 @@ interface ArchivoLeido {
                 </tr>
               </thead>
               <tbody>
-                @for (p of c.productos; track p.id; let idx = $index) {
+                @for (p of c.productos; track p.id) {
                   <tr>
                     <td>
                       <div class="celda-prod-nombre">
                         <span
                           class="dot"
-                          [style.background]="fmt.colorDeSlot(p.slot ?? idx)[0]"
+                          [style.background]="colorProducto(p.id)"
                         ></span>
                         <div>
                           <strong>{{ p.nombre }}</strong>
@@ -792,6 +792,12 @@ export class DatosTabComponent {
   valorActualProducto(id: string): number {
     const comp = this.store.todosComponentes().find((c) => c.id === id);
     return comp ? comp.valor : 0;
+  }
+
+  // Mismo color que en Patrimonio y Productos (sale del panel calculado, no del slot a secas).
+  colorProducto(id: string): string {
+    const color = this.store.todosComponentes().find((c) => c.id === id)?.color;
+    return Array.isArray(color) ? color[0] : this.fmt.colorDeSlot(1)[0];
   }
 
   readonly movimientosFiltrados = computed<MovimientoCfg[]>(() => {

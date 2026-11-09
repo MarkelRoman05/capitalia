@@ -210,14 +210,14 @@ import { ProductoCfg, ResultadoBusqueda } from '../../../models/portfolio.model'
               <div class="campo campo-full">
                 <label>Color identificativo</label>
                 <div class="paleta-colores">
-                  @for (par of fmt.paleta; track $index; let s = $index) {
+                  @for (par of fmt.paleta; track $index; let i = $index) {
                     <button
                       type="button"
                       class="color-swatch"
-                      [class.on]="formProd.slot === s"
+                      [class.on]="formProd.slot === i + 1"
                       [style.background]="par[0]"
-                      (click)="formProd.slot = s"
-                      [attr.aria-label]="'Color ' + (s + 1)"
+                      (click)="formProd.slot = i + 1"
+                      [attr.aria-label]="'Color ' + (i + 1)"
                     ></button>
                   }
                 </div>
@@ -337,6 +337,8 @@ export class ProductoModalComponent {
         this.mostrarAvanzadoProd.set(false);
         if (p) {
           this.formProd = { ...p };
+          // La cartera guarda la TER como fracción (0.0012); el formulario y el backend la manejan en %.
+          this.formProd.ter = p.ter != null ? p.ter * 100 : null;
           this.modoModalProd.set(
             p.fuente === 'manual' || !this.esTipoInversion(p.tipo) ? 'manual' : 'cotizado',
           );
@@ -354,8 +356,9 @@ export class ProductoModalComponent {
 
   private crearFormProductoVacio(): Partial<ProductoCfg> {
     const usados = new Set((this.store.cartera()?.productos || []).map((p) => p.slot ?? 0));
-    let slotLibre = 0;
-    for (let i = 0; i < 12; i++) {
+    // Los colores van de 1 a 12 (así los usa el backend y la paleta).
+    let slotLibre = 1;
+    for (let i = 1; i <= 12; i++) {
       if (!usados.has(i)) {
         slotLibre = i;
         break;
