@@ -2,11 +2,14 @@ import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
+import { ProductoModalComponent } from '../modals/producto-modal/producto-modal.component';
+import { MovimientoModalComponent } from '../modals/movimiento-modal/movimiento-modal.component';
+import { ValoracionModalComponent } from '../modals/valoracion-modal/valoracion-modal.component';
+import { LoteSaldosModalComponent } from '../modals/lote-saldos-modal/lote-saldos-modal.component';
 import {
   InformeImportacion,
   MovimientoCfg,
   ProductoCfg,
-  ResultadoBusqueda,
   ValoracionCfg,
 } from '../../models/portfolio.model';
 
@@ -17,7 +20,13 @@ interface ArchivoLeido {
 
 @Component({
   selector: 'cap-datos-tab',
-  imports: [FormsModule],
+  imports: [
+    FormsModule,
+    ProductoModalComponent,
+    MovimientoModalComponent,
+    ValoracionModalComponent,
+    LoteSaldosModalComponent,
+  ],
   template: `
     @if (store.cartera(); as c) {
       <!-- SUB-NAVEGACIÓN DE MIS DATOS -->
@@ -69,7 +78,11 @@ interface ArchivoLeido {
           <button type="button" class="btn-secundario btn-sm" (click)="store.cargarEjemplo()">
             Cargar ejemplo
           </button>
-          <button type="button" class="btn-peligro-outline btn-sm" (click)="confirmarVaciarCartera()">
+          <button
+            type="button"
+            class="btn-peligro-outline btn-sm"
+            (click)="confirmarVaciarCartera()"
+          >
             Vaciar cartera
           </button>
         </div>
@@ -84,7 +97,8 @@ interface ArchivoLeido {
             <div>
               <h2 class="card-title">Productos, cuentas, inmuebles y deudas</h2>
               <p class="card-sub">
-                Configura cada activo de tu patrimonio. Los fondos, ETFs, acciones y cripto actualizan su cotización automáticamente.
+                Configura cada activo de tu patrimonio. Los fondos, ETFs, acciones y cripto
+                actualizan su cotización automáticamente.
               </p>
             </div>
             <div class="header-btns">
@@ -196,7 +210,8 @@ interface ArchivoLeido {
             <div>
               <h2 class="card-title">Compras, ventas, dividendos y comisiones</h2>
               <p class="card-sub">
-                El motor calcula automáticamente las plusvalías realizadas aplicando el criterio fiscal FIFO español.
+                El motor calcula automáticamente las plusvalías realizadas aplicando el criterio
+                fiscal FIFO español.
               </p>
             </div>
             <div class="controles-tabla">
@@ -236,7 +251,9 @@ interface ArchivoLeido {
                     <td class="mono">{{ fmt.fechaCorta(m.fecha) }}</td>
                     <td>{{ nombreProducto(m.producto) }}</td>
                     <td>
-                      <span class="tag" [class]="'tag-mov-' + m.tipo">{{ m.tipo.toUpperCase() }}</span>
+                      <span class="tag" [class]="'tag-mov-' + m.tipo">{{
+                        m.tipo.toUpperCase()
+                      }}</span>
                     </td>
                     <td class="num mono">
                       {{ m.unidades ? fmt.num(m.unidades, 4) : '—' }}
@@ -274,9 +291,12 @@ interface ArchivoLeido {
         <section class="panel-card bloque-seccion">
           <div class="card-header">
             <div>
-              <h2 class="card-title">Saldos de cuentas, inmuebles, deudas y valoraciones manuales</h2>
+              <h2 class="card-title">
+                Saldos de cuentas, inmuebles, deudas y valoraciones manuales
+              </h2>
               <p class="card-sub">
-                Anota el saldo de tus cuentas bancarias, el valor tasado de tus inmuebles o el capital pendiente de tus préstamos.
+                Anota el saldo de tus cuentas bancarias, el valor tasado de tus inmuebles o el
+                capital pendiente de tus préstamos.
               </p>
             </div>
             <div class="header-btns">
@@ -307,7 +327,11 @@ interface ArchivoLeido {
                     <td>{{ nombreProducto(v.producto) }}</td>
                     <td class="num mono valor-privado">{{ fmt.eur(v.valor, 2) }}</td>
                     <td class="num mono valor-privado">
-                      {{ v.aportado !== null && v.aportado !== undefined ? fmt.eur(v.aportado, 2) : '—' }}
+                      {{
+                        v.aportado !== null && v.aportado !== undefined
+                          ? fmt.eur(v.aportado, 2)
+                          : '—'
+                      }}
                     </td>
                     <td class="num celda-acciones">
                       <button type="button" class="btn-tabla" (click)="abrirModalValoracion(v)">
@@ -342,7 +366,8 @@ interface ArchivoLeido {
             <div>
               <h2 class="card-title">Importar operaciones y saldos</h2>
               <p class="card-sub">
-                Sube extractos de MyInvestor, utiliza nuestra plantilla oficial Excel/CSV o convierte capturas de cualquier banco con IA.
+                Sube extractos de MyInvestor, utiliza nuestra plantilla oficial Excel/CSV o
+                convierte capturas de cualquier banco con IA.
               </p>
             </div>
             <div class="seg-group">
@@ -376,7 +401,9 @@ interface ArchivoLeido {
           @if (modoImportar() === 'myinvestor') {
             <div class="import-box">
               <p>
-                Exporta tus órdenes o movimientos en formato CSV desde MyInvestor y selecciónalos aquí. Si el archivo incluye el código ISIN, Capitalia creará y vinculará cada fondo automáticamente.
+                Exporta tus órdenes o movimientos en formato CSV desde MyInvestor y selecciónalos
+                aquí. Si el archivo incluye el código ISIN, Capitalia creará y vinculará cada fondo
+                automáticamente.
               </p>
               <div class="form-grid-2" style="margin-top: 1rem">
                 <div class="campo">
@@ -390,7 +417,9 @@ interface ArchivoLeido {
                   />
                 </div>
                 <div class="campo">
-                  <label for="imp-prod-def">Producto por defecto (solo si el CSV no trae ISIN)</label>
+                  <label for="imp-prod-def"
+                    >Producto por defecto (solo si el CSV no trae ISIN)</label
+                  >
                   <select id="imp-prod-def" class="input-select" [(ngModel)]="impProductoDefecto">
                     <option value="">Detectar automáticamente por ISIN</option>
                     @for (p of c.productos; track p.id) {
@@ -405,7 +434,8 @@ interface ArchivoLeido {
           @if (modoImportar() === 'plantilla') {
             <div class="import-box">
               <p>
-                Descarga la plantilla con ejemplos e instrucciones, rellena tus compras, ventas o saldos mensuales y súbela para previsualizar.
+                Descarga la plantilla con ejemplos e instrucciones, rellena tus compras, ventas o
+                saldos mensuales y súbela para previsualizar.
               </p>
               <div class="header-btns" style="margin: 1rem 0">
                 <a href="/api/plantilla.xlsx" download class="btn-secundario btn-sm">
@@ -431,8 +461,10 @@ interface ArchivoLeido {
           @if (modoImportar() === 'ia') {
             <div class="import-box">
               <p>
-                1. Copia estas instrucciones y pégalas en ChatGPT, Claude o Gemini junto con capturas, PDFs o extractos de tu banco o bróker.<br />
-                2. Pega debajo el CSV que te devuelva la IA (o súbelo como archivo) para previsualizarlo antes de guardar.
+                1. Copia estas instrucciones y pégalas en ChatGPT, Claude o Gemini junto con
+                capturas, PDFs o extractos de tu banco o bróker.<br />
+                2. Pega debajo el CSV que te devuelva la IA (o súbelo como archivo) para
+                previsualizarlo antes de guardar.
               </p>
               <div class="ia-prompt-bar">
                 <button type="button" class="btn-secundario btn-sm" (click)="copiarPromptIA()">
@@ -457,7 +489,9 @@ interface ArchivoLeido {
           <div class="import-footer-bar">
             <label class="check-row">
               <input type="checkbox" [(ngModel)]="impReemplazar" />
-              <span>Sustituir el historial previo de los productos incluidos en esta importación</span>
+              <span
+                >Sustituir el historial previo de los productos incluidos en esta importación</span
+              >
             </label>
             <button
               type="button"
@@ -487,20 +521,31 @@ interface ArchivoLeido {
                 <button
                   type="button"
                   class="btn-primario"
-                  [disabled]="confirmandoImportacion() || (inf['añadidos'] === 0 && inf.saldos === 0 && inf.productosNuevos.length === 0)"
+                  [disabled]="
+                    confirmandoImportacion() ||
+                    (inf['añadidos'] === 0 && inf.saldos === 0 && inf.productosNuevos.length === 0)
+                  "
                   (click)="ejecutarConfirmacionImportar()"
                 >
-                  {{ confirmandoImportacion() ? 'Guardando en PostgreSQL...' : '✓ Confirmar e importar ahora' }}
+                  {{
+                    confirmandoImportacion()
+                      ? 'Guardando en PostgreSQL...'
+                      : '✓ Confirmar e importar ahora'
+                  }}
                 </button>
               </div>
 
               @if (inf.productosNuevos.length) {
                 <div class="previa-nuevos">
-                  <strong>Se darán de alta automáticamente {{ inf.productosNuevos.length }} productos:</strong>
+                  <strong
+                    >Se darán de alta automáticamente
+                    {{ inf.productosNuevos.length }} productos:</strong
+                  >
                   <ul>
                     @for (pn of inf.productosNuevos; track $index) {
                       <li>
-                        <strong>{{ pn.nombre }}</strong> ({{ pn.tipo }} · {{ pn.identificador || pn.codigo }} · {{ pn.fuente }})
+                        <strong>{{ pn.nombre }}</strong> ({{ pn.tipo }} ·
+                        {{ pn.identificador || pn.codigo }} · {{ pn.fuente }})
                       </li>
                     }
                   </ul>
@@ -527,7 +572,9 @@ interface ArchivoLeido {
                         <td>
                           <span
                             class="tag"
-                            [class]="f.estado === 'nuevo' ? 'pos' : f.estado === 'error' ? 'neg' : ''"
+                            [class]="
+                              f.estado === 'nuevo' ? 'pos' : f.estado === 'error' ? 'neg' : ''
+                            "
                           >
                             {{ f.estado }}
                           </span>
@@ -535,7 +582,9 @@ interface ArchivoLeido {
                         <td class="mono">{{ f.fecha }}</td>
                         <td>{{ f.productoNombre || f.producto }}</td>
                         <td>{{ f.tipo }}</td>
-                        <td class="num mono">{{ f.unidades !== null ? fmt.num(f.unidades, 4) : '—' }}</td>
+                        <td class="num mono">
+                          {{ f.unidades !== null ? fmt.num(f.unidades, 4) : '—' }}
+                        </td>
                         <td class="num mono">{{ fmt.eur(f.importe, 2) }}</td>
                       </tr>
                     }
@@ -555,7 +604,8 @@ interface ArchivoLeido {
           <section class="panel-card">
             <h2 class="card-title">Copia de seguridad en archivo JSON</h2>
             <p class="card-sub">
-              Tus datos están respaldados en PostgreSQL, pero puedes descargar o restaurar un archivo JSON completo en cualquier momento.
+              Tus datos están respaldados en PostgreSQL, pero puedes descargar o restaurar un
+              archivo JSON completo en cualquier momento.
             </p>
             <div class="header-btns" style="margin-top: 1.25rem">
               <a href="/api/copia/descargar" download class="btn-primario">
@@ -576,11 +626,15 @@ interface ArchivoLeido {
           <section class="panel-card">
             <h2 class="card-title">Exportar informe web interactivo (.html)</h2>
             <p class="card-sub">
-              Genera un único archivo HTML autónomo que funciona sin conexión para guardar o compartir.
+              Genera un único archivo HTML autónomo que funciona sin conexión para guardar o
+              compartir.
             </p>
             <label class="check-row" style="margin-top: 1rem">
               <input type="checkbox" [(ngModel)]="ocultarImportesWeb" />
-              <span>Modo discreto: ocultar todos los importes en euros (mostrar solo porcentajes y evolución base 100)</span>
+              <span
+                >Modo discreto: ocultar todos los importes en euros (mostrar solo porcentajes y
+                evolución base 100)</span
+              >
             </label>
             <div style="margin-top: 1rem">
               <a
@@ -599,7 +653,8 @@ interface ArchivoLeido {
             <div>
               <h2 class="card-title">Puntos de restauración automáticos en PostgreSQL</h2>
               <p class="card-sub">
-                Capitalia guarda una copia instantánea antes de cualquier importación, vaciado o restauración.
+                Capitalia guarda una copia instantánea antes de cualquier importación, vaciado o
+                restauración.
               </p>
             </div>
           </div>
@@ -645,430 +700,28 @@ interface ArchivoLeido {
         </section>
       }
 
-      <!-- ========================================================= -->
-      <!-- MODAL: CREAR / EDITAR PRODUCTO                            -->
-      <!-- ========================================================= -->
-      @if (modalProductoAbierto()) {
-        <div class="modal-backdrop" (click)="modalProductoAbierto.set(false)">
-          <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ prodEditandoId() ? 'Editar producto o activo' : 'Añadir nuevo producto o activo' }}</h3>
-              <button type="button" class="btn-cerrar" (click)="modalProductoAbierto.set(false)">✕</button>
-            </div>
-
-            <div class="modal-body">
-              <div class="seg-group" style="margin-bottom: 1rem">
-                <button
-                  type="button"
-                  class="seg-btn"
-                  [class.on]="modoModalProd() === 'cotizado'"
-                  (click)="cambiarModoModalProd('cotizado')"
-                >
-                  Fondo, ETF, acción o cripto (cotización automática)
-                </button>
-                <button
-                  type="button"
-                  class="seg-btn"
-                  [class.on]="modoModalProd() === 'manual'"
-                  (click)="cambiarModoModalProd('manual')"
-                >
-                  Cuenta, efectivo, inmueble o deuda (saldo manual)
-                </button>
-              </div>
-
-              @if (modoModalProd() === 'cotizado') {
-                <div class="buscador-box">
-                  <label for="busq-input">Buscar por ISIN, ticker o nombre (Morningstar, Yahoo Finance, CoinGecko)</label>
-                  <div class="buscador-row">
-                    <input
-                      id="busq-input"
-                      type="text"
-                      [(ngModel)]="consultaBusqueda"
-                      (keydown.enter)="$event.preventDefault(); lanzarBusqueda()"
-                      placeholder="Ej. IE00B03HCZ61, MSCI World, AAPL, Bitcoin..."
-                    />
-                    <button
-                      type="button"
-                      class="btn-secundario"
-                      [disabled]="buscando()"
-                      (click)="lanzarBusqueda()"
-                    >
-                      {{ buscando() ? 'Buscando...' : 'Buscar' }}
-                    </button>
-                  </div>
-
-                  @if (resultadosBusqueda().length) {
-                    <div class="resultados-lista">
-                      @for (r of resultadosBusqueda(); track $index) {
-                        <button
-                          type="button"
-                          class="resultado-item"
-                          (click)="seleccionarResultadoBusqueda(r)"
-                        >
-                          <div>
-                            <strong>{{ r.nombre }}</strong>
-                            <div class="prod-tags">
-                              <span class="tag">{{ r.tipo }}</span>
-                              <span class="tag mono">{{ r.identificador }}</span>
-                              <span class="tag">{{ r.fuente }}</span>
-                              @if (r.ficha?.ter) {
-                                <span class="tag">TER {{ r.ficha!.ter }}%</span>
-                              }
-                            </div>
-                          </div>
-                          <div class="mono">
-                            {{ r.precio }} {{ r.moneda }}
-                          </div>
-                        </button>
-                      }
-                    </div>
-                  }
-                </div>
-              }
-
-              <form (ngSubmit)="guardarProductoModal()" class="form-grid-2">
-                <div class="campo">
-                  <label for="pr-nombre">Nombre completo</label>
-                  <input id="pr-nombre" type="text" [(ngModel)]="formProd.nombre" name="nombre" required placeholder="Ej. Vanguard Global Stock Index" />
-                </div>
-
-                <div class="campo">
-                  <label for="pr-corto">Nombre corto (para gráficos)</label>
-                  <input id="pr-corto" type="text" [(ngModel)]="formProd.corto" name="corto" placeholder="Ej. MSCI World" />
-                </div>
-
-                <div class="campo">
-                  <label for="pr-tipo">Tipo de activo</label>
-                  <select id="pr-tipo" class="input-select" [(ngModel)]="formProd.tipo" name="tipo">
-                    <option value="fondo">Fondo de inversión</option>
-                    <option value="etf">ETF</option>
-                    <option value="accion">Acción</option>
-                    <option value="cripto">Criptomoneda</option>
-                    <option value="efectivo">Efectivo y cuentas</option>
-                    <option value="inmueble">Inmueble</option>
-                    <option value="deuda">Deuda / Préstamo (resta al patrimonio)</option>
-                    <option value="otro">Otro activo</option>
-                  </select>
-                </div>
-
-                <div class="campo">
-                  <label for="pr-entidad">Banco, bróker o entidad</label>
-                  <input id="pr-entidad" type="text" [(ngModel)]="formProd.entidad" name="entidad" placeholder="Ej. MyInvestor, Indexa, Interactive Brokers..." />
-                </div>
-
-                <div class="campo">
-                  <label for="pr-clase">Clase de activo (para distribución)</label>
-                  <input id="pr-clase" type="text" [(ngModel)]="formProd.clase" name="clase" placeholder="Ej. Renta variable global, Liquidez, Cripto..." />
-                </div>
-
-                <div class="campo">
-                  <label for="pr-ident">ISIN o Ticker visible</label>
-                  <input id="pr-ident" type="text" [(ngModel)]="formProd.identificador" name="identificador" placeholder="Ej. IE00B03HCZ61" />
-                </div>
-
-                @if (modoModalProd() === 'cotizado') {
-                  <div class="campo">
-                    <label for="pr-ter">Comisión anual TER (%)</label>
-                    <input id="pr-ter" type="number" step="0.01" min="0" [(ngModel)]="formProd.ter" name="ter" placeholder="Ej. 0.12" />
-                  </div>
-
-                  <div class="campo">
-                    <label for="pr-riesgo">Nivel de riesgo SRRI (1 a 7)</label>
-                    <input id="pr-riesgo" type="number" step="1" min="1" max="7" [(ngModel)]="formProd.riesgo" name="riesgo" placeholder="Ej. 5" />
-                  </div>
-                }
-
-                <div class="campo campo-full">
-                  <label>Color identificativo</label>
-                  <div class="paleta-colores">
-                    @for (par of fmt.paleta; track $index; let s = $index) {
-                      <button
-                        type="button"
-                        class="color-swatch"
-                        [class.on]="formProd.slot === s"
-                        [style.background]="par[0]"
-                        (click)="formProd.slot = s"
-                        [attr.aria-label]="'Color ' + (s + 1)"
-                      ></button>
-                    }
-                  </div>
-                </div>
-
-                <div class="campo campo-full">
-                  <label class="check-row">
-                    <input type="checkbox" [(ngModel)]="formProd.largoPlazo" name="largoPlazo" />
-                    <span>Inversión a largo plazo (incluir en el filtro rápido «Solo largo plazo»)</span>
-                  </label>
-                </div>
-
-                <div class="campo campo-full">
-                  <button
-                    type="button"
-                    class="btn-link"
-                    (click)="mostrarAvanzadoProd.set(!mostrarAvanzadoProd())"
-                  >
-                    {{ mostrarAvanzadoProd() ? '▾ Ocultar configuración técnica de fuentes' : '▸ Configuración avanzada de fuente de precios (Morningstar / Yahoo / CoinGecko)' }}
-                  </button>
-                </div>
-
-                @if (mostrarAvanzadoProd()) {
-                  <div class="campo">
-                    <label for="pr-fuente">Fuente de cotización</label>
-                    <select id="pr-fuente" class="input-select" [(ngModel)]="formProd.fuente" name="fuente">
-                      <option value="morningstar">Morningstar (Fondos/ETFs)</option>
-                      <option value="yahoo">Yahoo Finance (Acciones/ETFs/Cripto)</option>
-                      <option value="coingecko">CoinGecko (Cripto)</option>
-                      <option value="manual">Manual (Saldos)</option>
-                    </select>
-                  </div>
-
-                  <div class="campo">
-                    <label for="pr-codigo">Código interno en la fuente</label>
-                    <input id="pr-codigo" type="text" [(ngModel)]="formProd.codigo" name="codigo" placeholder="SecId de Morningstar, ticker de Yahoo o ID CoinGecko" />
-                  </div>
-
-                  <div class="campo">
-                    <label for="pr-moneda">Divisa de cotización</label>
-                    <select id="pr-moneda" class="input-select" [(ngModel)]="formProd.moneda" name="moneda">
-                      <option value="EUR">EUR (€)</option>
-                      <option value="USD">USD ($ - conversión automática a EUR)</option>
-                      <option value="GBP">GBP (£)</option>
-                    </select>
-                  </div>
-
-                  <div class="campo">
-                    <label for="pr-vivo">ID CoinGecko en vivo (opcional)</label>
-                    <input id="pr-vivo" type="text" [(ngModel)]="formProd.vivo" name="vivo" placeholder="Ej. bitcoin, ethereum" />
-                  </div>
-                }
-
-                <div class="modal-footer campo-full">
-                  <button type="button" class="btn-fantasma" (click)="modalProductoAbierto.set(false)">
-                    Cancelar
-                  </button>
-                  <button type="submit" class="btn-primario">
-                    {{ prodEditandoId() ? 'Guardar cambios' : 'Crear producto' }}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      }
-
-      <!-- ========================================================= -->
-      <!-- MODAL: CREAR / EDITAR MOVIMIENTO                          -->
-      <!-- ========================================================= -->
-      @if (modalMovimientoAbierto()) {
-        <div class="modal-backdrop" (click)="modalMovimientoAbierto.set(false)">
-          <div class="modal-card" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ movEditandoId() ? 'Editar operación' : 'Anotar compra, venta, dividendo o comisión' }}</h3>
-              <button type="button" class="btn-cerrar" (click)="modalMovimientoAbierto.set(false)">✕</button>
-            </div>
-            <form (ngSubmit)="guardarMovimientoModal()" class="modal-body">
-              <div class="campo">
-                <label for="mv-prod">Producto</label>
-                <select id="mv-prod" class="input-select" [(ngModel)]="formMov.producto" name="producto" required>
-                  @for (p of c.productos; track p.id) {
-                    <option [value]="p.id">{{ p.nombre }}</option>
-                  }
-                </select>
-              </div>
-
-              <div class="form-grid-2">
-                <div class="campo">
-                  <label for="mv-tipo">Tipo de operación</label>
-                  <select id="mv-tipo" class="input-select" [(ngModel)]="formMov.tipo" name="tipo">
-                    <option value="compra">Compra / Suscripción</option>
-                    <option value="venta">Venta / Reembolso (FIFO)</option>
-                    <option value="dividendo">Dividendo cobrado</option>
-                    <option value="comision">Comisión custodia / bróker</option>
-                  </select>
-                </div>
-
-                <div class="campo">
-                  <label for="mv-fecha">Fecha</label>
-                  <input id="mv-fecha" type="date" [(ngModel)]="formMov.fecha" name="fecha" required />
-                </div>
-              </div>
-
-              @if (formMov.tipo === 'compra' || formMov.tipo === 'venta') {
-                <div class="form-grid-2">
-                  <div class="campo">
-                    <label for="mv-unidades">Participaciones / Títulos</label>
-                    <input
-                      id="mv-unidades"
-                      type="number"
-                      step="any"
-                      min="0.00000001"
-                      [(ngModel)]="formMov.unidades"
-                      name="unidades"
-                      required
-                    />
-                  </div>
-                  <div class="campo">
-                    <label for="mv-importe">Importe total (€)</label>
-                    <input
-                      id="mv-importe"
-                      type="number"
-                      step="0.01"
-                      min="0.01"
-                      [(ngModel)]="formMov.importe"
-                      name="importe"
-                      required
-                    />
-                  </div>
-                </div>
-                @if (formMov.unidades > 0 && formMov.importe > 0) {
-                  <p class="muted mono" style="font-size: 0.82rem; margin: -0.25rem 0 0.75rem">
-                    Precio unitario implícito: {{ fmt.eur(formMov.importe / formMov.unidades, 4) }} por título
-                  </p>
-                }
-              } @else {
-                <div class="campo">
-                  <label for="mv-importe-simple">Importe (€)</label>
-                  <input
-                    id="mv-importe-simple"
-                    type="number"
-                    step="0.01"
-                    min="0.01"
-                    [(ngModel)]="formMov.importe"
-                    name="importeSimple"
-                    required
-                  />
-                </div>
-              }
-
-              <div class="campo">
-                <label for="mv-nota">Nota o comentario (opcional)</label>
-                <input id="mv-nota" type="text" [(ngModel)]="formMov.nota" name="nota" placeholder="Ej. Aportación mensual DCA" />
-              </div>
-
-              <div class="modal-footer">
-                <button type="button" class="btn-fantasma" (click)="modalMovimientoAbierto.set(false)">
-                  Cancelar
-                </button>
-                <button type="submit" class="btn-primario">
-                  Guardar operación
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
-
-      <!-- ========================================================= -->
-      <!-- MODAL: CREAR / EDITAR SALDO PUNTUAL                       -->
-      <!-- ========================================================= -->
-      @if (modalValoracionAbierto()) {
-        <div class="modal-backdrop" (click)="modalValoracionAbierto.set(false)">
-          <div class="modal-card" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>{{ valEditandoId() ? 'Editar saldo o valoración' : 'Anotar saldo o valoración' }}</h3>
-              <button type="button" class="btn-cerrar" (click)="modalValoracionAbierto.set(false)">✕</button>
-            </div>
-            <form (ngSubmit)="guardarValoracionModal()" class="modal-body">
-              <div class="campo">
-                <label for="vl-prod">Activo / Cuenta / Deuda</label>
-                <select id="vl-prod" class="input-select" [(ngModel)]="formVal.producto" name="producto" required>
-                  @for (p of c.productos; track p.id) {
-                    <option [value]="p.id">{{ p.nombre }} ({{ etiquetaTipo(p.tipo) }})</option>
-                  }
-                </select>
-              </div>
-
-              <div class="form-grid-2">
-                <div class="campo">
-                  <label for="vl-fecha">Fecha del saldo</label>
-                  <input id="vl-fecha" type="date" [(ngModel)]="formVal.fecha" name="fecha" required />
-                </div>
-                <div class="campo">
-                  <label for="vl-valor">Saldo o valor actual (€)</label>
-                  <input id="vl-valor" type="number" step="0.01" min="0" [(ngModel)]="formVal.valor" name="valor" required />
-                </div>
-              </div>
-
-              <div class="campo">
-                <label for="vl-aportado">Coste de adquisición / Capital aportado (opcional)</label>
-                <input
-                  id="vl-aportado"
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  [(ngModel)]="formVal.aportado"
-                  name="aportado"
-                  placeholder="Déjalo vacío para cuentas corrientes o deudas"
-                />
-              </div>
-
-              <div class="modal-footer">
-                <button type="button" class="btn-fantasma" (click)="modalValoracionAbierto.set(false)">
-                  Cancelar
-                </button>
-                <button type="submit" class="btn-primario">Guardar saldo</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
-
-      <!-- ========================================================= -->
-      <!-- MODAL: ANOTAR SALDOS DE TODOS DE UNA VEZ                  -->
-      <!-- ========================================================= -->
-      @if (modalLoteSaldosAbierto()) {
-        <div class="modal-backdrop" (click)="modalLoteSaldosAbierto.set(false)">
-          <div class="modal-card modal-lg" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>Actualizar todos los saldos en una fecha</h3>
-              <button type="button" class="btn-cerrar" (click)="modalLoteSaldosAbierto.set(false)">✕</button>
-            </div>
-            <form (ngSubmit)="guardarLoteSaldos()" class="modal-body">
-              <div class="campo" style="max-width: 240px">
-                <label for="lote-fecha">Fecha de cierre</label>
-                <input id="lote-fecha" type="date" [(ngModel)]="loteFecha" name="loteFecha" required />
-              </div>
-
-              <div class="tabla-scroll" style="margin-top: 1rem">
-                <table class="tabla-datos">
-                  <thead>
-                    <tr>
-                      <th>Activo / Cuenta</th>
-                      <th>Tipo</th>
-                      <th class="num">Saldo o valor (€)</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    @for (item of loteItems; track item.producto) {
-                      <tr>
-                        <td><strong>{{ item.nombre }}</strong></td>
-                        <td><span class="tag">{{ etiquetaTipo(item.tipo) }}</span></td>
-                        <td class="num">
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            class="input-inline-num"
-                            [(ngModel)]="item.valor"
-                            [name]="'lote_' + item.producto"
-                          />
-                        </td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-
-              <div class="modal-footer">
-                <button type="button" class="btn-fantasma" (click)="modalLoteSaldosAbierto.set(false)">
-                  Cancelar
-                </button>
-                <button type="submit" class="btn-primario">Guardar todos los saldos</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
+      <!-- MODALES (COMPONENTES SEPARADOS) -->
+      <cap-producto-modal
+        [abierto]="modalProductoAbierto()"
+        [productoEditar]="prodEditando()"
+        (cerrar)="modalProductoAbierto.set(false)"
+      />
+      <cap-movimiento-modal
+        [abierto]="modalMovimientoAbierto()"
+        [movimientoEditar]="movEditando()"
+        [productoPreseleccionado]="movProductoPreseleccionado()"
+        (cerrar)="modalMovimientoAbierto.set(false)"
+      />
+      <cap-valoracion-modal
+        [abierto]="modalValoracionAbierto()"
+        [valoracionEditar]="valEditando()"
+        [productoPreseleccionado]="valProductoPreseleccionado()"
+        (cerrar)="modalValoracionAbierto.set(false)"
+      />
+      <cap-lote-saldos-modal
+        [abierto]="modalLoteSaldosAbierto()"
+        (cerrar)="modalLoteSaldosAbierto.set(false)"
+      />
     }
   `,
 })
@@ -1081,55 +734,20 @@ export class DatosTabComponent {
 
   // Product modal state
   readonly modalProductoAbierto = signal<boolean>(false);
-  readonly prodEditandoId = signal<string | null>(null);
-  readonly modoModalProd = signal<'cotizado' | 'manual'>('cotizado');
-  readonly mostrarAvanzadoProd = signal<boolean>(false);
-  readonly buscando = signal<boolean>(false);
-  readonly resultadosBusqueda = signal<ResultadoBusqueda[]>([]);
-  consultaBusqueda = '';
-
-  formProd: Partial<ProductoCfg> = this.crearFormProductoVacio();
+  readonly prodEditando = signal<ProductoCfg | null>(null);
 
   // Movement modal state
   readonly modalMovimientoAbierto = signal<boolean>(false);
-  readonly movEditandoId = signal<string | null>(null);
-  formMov: {
-    producto: string;
-    tipo: 'compra' | 'venta' | 'dividendo' | 'comision';
-    fecha: string;
-    unidades: number;
-    importe: number;
-    comision: number | null;
-    nota: string;
-  } = {
-    producto: '',
-    tipo: 'compra',
-    fecha: new Date().toISOString().slice(0, 10),
-    unidades: 0,
-    importe: 0,
-    comision: null,
-    nota: '',
-  };
+  readonly movEditando = signal<MovimientoCfg | null>(null);
+  readonly movProductoPreseleccionado = signal<string | undefined>(undefined);
 
   // Balance modal state
   readonly modalValoracionAbierto = signal<boolean>(false);
-  readonly valEditandoId = signal<string | null>(null);
-  formVal: {
-    producto: string;
-    fecha: string;
-    valor: number;
-    aportado: number | null;
-  } = {
-    producto: '',
-    fecha: new Date().toISOString().slice(0, 10),
-    valor: 0,
-    aportado: null,
-  };
+  readonly valEditando = signal<ValoracionCfg | null>(null);
+  readonly valProductoPreseleccionado = signal<string | undefined>(undefined);
 
   // Batch Balances modal state
   readonly modalLoteSaldosAbierto = signal<boolean>(false);
-  loteFecha = new Date().toISOString().slice(0, 10);
-  loteItems: { producto: string; nombre: string; tipo: string; valor: number | null }[] = [];
 
   // Import state
   readonly modoImportar = signal<'myinvestor' | 'plantilla' | 'ia'>('myinvestor');
@@ -1191,115 +809,9 @@ export class DatosTabComponent {
   });
 
   // Product modal logic
-  private crearFormProductoVacio(): Partial<ProductoCfg> {
-    const usados = new Set(
-      (this.store.cartera()?.productos || []).map((p) => p.slot ?? 0)
-    );
-    let slotLibre = 0;
-    for (let i = 0; i < 12; i++) {
-      if (!usados.has(i)) {
-        slotLibre = i;
-        break;
-      }
-    }
-    return {
-      nombre: '',
-      corto: '',
-      tipo: 'fondo',
-      identificador: '',
-      fuente: 'morningstar',
-      codigo: '',
-      moneda: 'EUR',
-      entidad: '',
-      clase: '',
-      gestora: '',
-      ter: null,
-      riesgo: null,
-      slot: slotLibre,
-      largoPlazo: true,
-      vivo: '',
-      papel: '',
-    };
-  }
-
   abrirModalProducto(p?: ProductoCfg): void {
-    this.resultadosBusqueda.set([]);
-    this.consultaBusqueda = '';
-    if (p) {
-      this.prodEditandoId.set(p.id);
-      this.formProd = { ...p };
-      this.modoModalProd.set(
-        p.fuente === 'manual' || !this.esTipoInversion(p.tipo)
-          ? 'manual'
-          : 'cotizado'
-      );
-    } else {
-      this.prodEditandoId.set(null);
-      this.formProd = this.crearFormProductoVacio();
-      this.modoModalProd.set('cotizado');
-    }
-    this.mostrarAvanzadoProd.set(false);
+    this.prodEditando.set(p ?? null);
     this.modalProductoAbierto.set(true);
-  }
-
-  cambiarModoModalProd(modo: 'cotizado' | 'manual'): void {
-    this.modoModalProd.set(modo);
-    if (modo === 'manual') {
-      this.formProd.fuente = 'manual';
-      if (this.esTipoInversion(this.formProd.tipo || 'fondo')) {
-        this.formProd.tipo = 'efectivo';
-      }
-      this.formProd.largoPlazo = false;
-    } else {
-      this.formProd.fuente = 'morningstar';
-      if (!this.esTipoInversion(this.formProd.tipo || 'efectivo')) {
-        this.formProd.tipo = 'fondo';
-      }
-      this.formProd.largoPlazo = true;
-    }
-  }
-
-  async lanzarBusqueda(): Promise<void> {
-    const q = this.consultaBusqueda.trim();
-    if (q.length < 2) return;
-    this.buscando.set(true);
-    try {
-      const res = await this.store.buscarProductos(q);
-      this.resultadosBusqueda.set(res);
-    } catch {
-      this.resultadosBusqueda.set([]);
-    } finally {
-      this.buscando.set(false);
-    }
-  }
-
-  seleccionarResultadoBusqueda(r: ResultadoBusqueda): void {
-    this.formProd.nombre = r.nombre;
-    this.formProd.corto = r.nombre.slice(0, 22);
-    this.formProd.tipo = r.tipo;
-    this.formProd.identificador = r.identificador;
-    this.formProd.fuente = r.fuente;
-    this.formProd.codigo = r.codigo;
-    this.formProd.moneda = r.moneda || 'EUR';
-    if (r.vivo) this.formProd.vivo = r.vivo;
-    if (r.ficha) {
-      if (r.ficha.ter !== undefined) this.formProd.ter = r.ficha.ter;
-      if (r.ficha.riesgo !== undefined) this.formProd.riesgo = r.ficha.riesgo;
-      if (r.ficha.clase) this.formProd.clase = r.ficha.clase;
-      if (r.ficha.gestora) this.formProd.gestora = r.ficha.gestora;
-    }
-    this.resultadosBusqueda.set([]);
-  }
-
-  async guardarProductoModal(): Promise<void> {
-    if (!this.formProd.nombre?.trim()) return;
-    const ok = await this.store.guardarProducto(
-      this.formProd,
-      this.prodEditandoId() || undefined
-    );
-    if (ok) {
-      this.modalProductoAbierto.set(false);
-    }
   }
 
   confirmarBorrarProducto(p: ProductoCfg): void {
@@ -1316,58 +828,9 @@ export class DatosTabComponent {
 
   // Movement modal logic
   abrirModalMovimiento(m?: MovimientoCfg, productoPreseleccionado?: string): void {
-    const prods = this.store.cartera()?.productos || [];
-    if (m) {
-      this.movEditandoId.set(m.id);
-      this.formMov = {
-        producto: m.producto,
-        tipo: m.tipo,
-        fecha: m.fecha,
-        unidades: m.unidades || 0,
-        importe: m.importe,
-        comision: m.comision ?? null,
-        nota: m.nota || '',
-      };
-    } else {
-      this.movEditandoId.set(null);
-      const prodInicial =
-        productoPreseleccionado ||
-        prods.find((p) => this.esTipoInversion(p.tipo))?.id ||
-        prods[0]?.id ||
-        '';
-      this.formMov = {
-        producto: prodInicial,
-        tipo: 'compra',
-        fecha: new Date().toISOString().slice(0, 10),
-        unidades: 0,
-        importe: 0,
-        comision: null,
-        nota: '',
-      };
-    }
+    this.movEditando.set(m ?? null);
+    this.movProductoPreseleccionado.set(productoPreseleccionado);
     this.modalMovimientoAbierto.set(true);
-  }
-
-  async guardarMovimientoModal(): Promise<void> {
-    const payload: Partial<MovimientoCfg> = {
-      producto: this.formMov.producto,
-      tipo: this.formMov.tipo,
-      fecha: this.formMov.fecha,
-      unidades:
-        this.formMov.tipo === 'compra' || this.formMov.tipo === 'venta'
-          ? Number(this.formMov.unidades)
-          : 0,
-      importe: Number(this.formMov.importe),
-      comision: this.formMov.comision ? Number(this.formMov.comision) : null,
-      nota: this.formMov.nota,
-    };
-    const ok = await this.store.guardarMovimiento(
-      payload,
-      this.movEditandoId() || undefined
-    );
-    if (ok) {
-      this.modalMovimientoAbierto.set(false);
-    }
   }
 
   confirmarBorrarMovimiento(m: MovimientoCfg): void {
@@ -1384,49 +847,9 @@ export class DatosTabComponent {
 
   // Balance modal logic
   abrirModalValoracion(v?: ValoracionCfg, productoPreseleccionado?: string): void {
-    const prods = this.store.cartera()?.productos || [];
-    if (v) {
-      this.valEditandoId.set(v.id);
-      this.formVal = {
-        producto: v.producto,
-        fecha: v.fecha,
-        valor: v.valor,
-        aportado: v.aportado ?? null,
-      };
-    } else {
-      this.valEditandoId.set(null);
-      const prodInicial =
-        productoPreseleccionado ||
-        prods.find((p) => !this.esTipoInversion(p.tipo) || p.fuente === 'manual')
-          ?.id ||
-        prods[0]?.id ||
-        '';
-      this.formVal = {
-        producto: prodInicial,
-        fecha: new Date().toISOString().slice(0, 10),
-        valor: this.valorActualProducto(prodInicial),
-        aportado: null,
-      };
-    }
+    this.valEditando.set(v ?? null);
+    this.valProductoPreseleccionado.set(productoPreseleccionado);
     this.modalValoracionAbierto.set(true);
-  }
-
-  async guardarValoracionModal(): Promise<void> {
-    const ok = await this.store.guardarValoracion(
-      {
-        producto: this.formVal.producto,
-        fecha: this.formVal.fecha,
-        valor: Number(this.formVal.valor),
-        aportado:
-          this.formVal.aportado !== null && this.formVal.aportado !== undefined
-            ? Number(this.formVal.aportado)
-            : null,
-      },
-      this.valEditandoId() || undefined
-    );
-    if (ok) {
-      this.modalValoracionAbierto.set(false);
-    }
   }
 
   confirmarBorrarValoracion(v: ValoracionCfg): void {
@@ -1442,35 +865,7 @@ export class DatosTabComponent {
   }
 
   abrirModalLoteSaldos(): void {
-    const prods = this.store.cartera()?.productos || [];
-    const manuales = prods.filter(
-      (p) => !this.esTipoInversion(p.tipo) || p.fuente === 'manual'
-    );
-    const lista = manuales.length ? manuales : prods;
-    this.loteFecha = new Date().toISOString().slice(0, 10);
-    this.loteItems = lista.map((p) => ({
-      producto: p.id,
-      nombre: p.nombre,
-      tipo: p.tipo,
-      valor: Math.abs(this.valorActualProducto(p.id)),
-    }));
     this.modalLoteSaldosAbierto.set(true);
-  }
-
-  async guardarLoteSaldos(): Promise<void> {
-    const saldos = this.loteItems
-      .filter((it) => it.valor !== null && it.valor !== undefined)
-      .map((it) => ({
-        producto: it.producto,
-        valor: Number(it.valor),
-      }));
-    const ok = await this.store.guardarValoracion({
-      fecha: this.loteFecha,
-      saldos,
-    });
-    if (ok) {
-      this.modalLoteSaldosAbierto.set(false);
-    }
   }
 
   // Import logic

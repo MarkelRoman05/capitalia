@@ -1,122 +1,150 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 
 @Component({
   selector: 'cap-login',
-  imports: [FormsModule],
+  imports: [FormsModule, RouterLink],
   template: `
     <div class="auth-screen">
       <section class="auth-pitch">
-        <h1 class="auth-pitch-title">Tu patrimonio, medido con rigor.</h1>
-        <p class="auth-pitch-text">
-          Fondos, ETFs, acciones, cripto, cuentas, inmuebles y deudas en un solo sitio. Rentabilidad real (TIR), plusvalías por FIFO y comparación con un indexado, calculadas sobre tus propias aportaciones.
-        </p>
+        <div class="auth-pitch-top">
+          <div class="auth-brand-badge">
+            <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" rx="8" fill="currentColor" opacity="0.16" />
+              <path
+                d="M7 22V12m6 10V15m6 7V8m6 14V11"
+                stroke="currentColor"
+                stroke-width="2.6"
+                stroke-linecap="round"
+              />
+            </svg>
+            <div class="auth-brand-texts">
+              <span class="auth-brand-name">Capitalia</span>
+              <span class="auth-brand-tag">Private Wealth &amp; Quant Analytics</span>
+            </div>
+          </div>
+
+          <span class="auth-pill-kicker">Plataforma Cuantitativa de Patrimonio</span>
+          <h1 class="auth-pitch-title">Tu patrimonio, medido con precisión institucional.</h1>
+          <p class="auth-pitch-text">
+            Unifica fondos indexados, ETFs, acciones, criptoactivos, cuentas remuneradas, inmuebles
+            y pasivos en un libro mayor privado. Rentabilidad ponderada por dinero (TIR) y por
+            tiempo (TWR), plusvalías FIFO y comparativa directa contra índices globales.
+          </p>
+        </div>
+
+        <div class="auth-showcase-grid">
+          <div class="auth-showcase-card">
+            <span class="asc-label">Motor Financiero</span>
+            <strong class="asc-val">XIRR + TWR + FIFO</strong>
+            <span class="asc-sub"
+              >Cálculo fiscal español y métricas de riesgo Sharpe y Max Drawdown</span
+            >
+          </div>
+          <div class="auth-showcase-card">
+            <span class="asc-label">Fuentes de Mercado</span>
+            <strong class="asc-val">Morningstar · Yahoo · CoinGecko</strong>
+            <span class="asc-sub"
+              >Series históricas diarias en EUR y cotización cripto en tiempo real</span
+            >
+          </div>
+        </div>
+
         <ul class="auth-pitch-list">
-          <li>Precios históricos de Morningstar, Yahoo Finance y CoinGecko</li>
-          <li>Importa desde MyInvestor, Excel o cualquier banco con IA</li>
-          <li>Tus datos se guardan en tu propia base PostgreSQL</li>
+          <li>
+            Importación directa desde MyInvestor, plantillas Excel/CSV o extractos bancarios con IA
+          </li>
+          <li>
+            Base de datos PostgreSQL dedicada con copias de seguridad automáticas por operación
+          </li>
+          <li>
+            Modo presentación instantáneo para compartir métricas ocultando importes sensibles
+          </li>
         </ul>
       </section>
-      <div class="auth-card">
-        <div class="auth-brand">
-          <span class="auth-title">Capitalia</span>
-        </div>
-        <p class="auth-sub">Accede a tu cartera o crea una cuenta nueva.</p>
 
-        <div class="auth-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            [class.on]="modo() === 'login'"
-            (click)="cambiarModo('login')"
-          >
-            Iniciar sesión
-          </button>
-          <button
-            type="button"
-            role="tab"
-            [class.on]="modo() === 'registro'"
-            (click)="cambiarModo('registro')"
-          >
-            Crear cuenta
-          </button>
-        </div>
-
-        @if (store.errorGlobal()) {
-          <div class="auth-alert" role="alert">
-            {{ store.errorGlobal() }}
+      <section class="auth-panel-wrapper">
+        <div class="auth-card">
+          <div class="auth-card-header">
+            <span class="auth-kicker">ACCESO PRIVADO</span>
+            <h2 class="auth-title">Iniciar sesión</h2>
+            <p class="auth-sub">
+              Accede a tu terminal patrimonial o cambia a creación de cuenta nueva.
+            </p>
           </div>
-        }
 
-        <form class="auth-form" (ngSubmit)="enviar()">
-          @if (modo() === 'registro') {
-            <div class="campo">
-              <label for="auth-nombre">Nombre o alias</label>
-              <input
-                id="auth-nombre"
-                type="text"
-                name="nombre"
-                [(ngModel)]="nombre"
-                placeholder="Ej. Markel"
-                autocomplete="name"
-                required
-              />
+          <div class="auth-tabs" role="navigation" aria-label="Cambiar entre acceso y registro">
+            <a routerLink="/login" class="auth-tab-link on" aria-current="page"> Iniciar sesión </a>
+            <a routerLink="/registro" class="auth-tab-link"> Crear cuenta </a>
+          </div>
+
+          @if (store.errorGlobal()) {
+            <div class="auth-alert" role="alert">
+              <span aria-hidden="true">⚠</span>
+              <span>{{ store.errorGlobal() }}</span>
             </div>
           }
 
-          <div class="campo">
-            <label for="auth-email">Correo electrónico</label>
-            <input
-              id="auth-email"
-              type="email"
-              name="email"
-              [(ngModel)]="email"
-              placeholder="tu@correo.com"
-              autocomplete="email"
-              required
-            />
+          <form class="auth-form" (ngSubmit)="enviar()">
+            <div class="campo">
+              <label for="auth-email">Correo electrónico</label>
+              <input
+                id="auth-email"
+                type="email"
+                name="email"
+                [(ngModel)]="email"
+                placeholder="nombre@dominio.com"
+                autocomplete="email"
+                required
+              />
+            </div>
+
+            <div class="campo">
+              <label for="auth-clave">Contraseña</label>
+              <input
+                id="auth-clave"
+                type="password"
+                name="clave"
+                [(ngModel)]="clave"
+                placeholder="Introduce tu contraseña"
+                autocomplete="current-password"
+                required
+              />
+            </div>
+
+            <button type="submit" class="btn-primario auth-submit" [disabled]="enviando()">
+              @if (enviando()) {
+                <span class="girando" aria-hidden="true">↻</span>
+                <span>Verificando credenciales…</span>
+              } @else {
+                <span>Entrar a mi cartera →</span>
+              }
+            </button>
+          </form>
+
+          <div class="auth-switch-prompt">
+            <span>¿Todavía no tienes cuenta en Capitalia?</span>
+            <a routerLink="/registro" class="btn-link">Crear una cuenta gratis</a>
           </div>
 
-          <div class="campo">
-            <label for="auth-clave">Contraseña</label>
-            <input
-              id="auth-clave"
-              type="password"
-              name="clave"
-              [(ngModel)]="clave"
-              placeholder="Mínimo 8 caracteres"
-              autocomplete="current-password"
-              required
-            />
+          <div class="auth-footer">
+            <span>🔒 Sesiones firmadas HttpOnly · Cifrado PBKDF2-HMAC-SHA256</span>
           </div>
-
-          <button type="submit" class="btn-primario auth-submit" [disabled]="enviando()">
-            @if (enviando()) {
-              <span>Verificando…</span>
-            } @else {
-              <span>{{ modo() === 'login' ? 'Entrar' : 'Crear cuenta' }}</span>
-            }
-          </button>
-        </form>
-
-        <p class="auth-footer">Contraseñas cifradas con PBKDF2-SHA256.</p>
-      </div>
+        </div>
+      </section>
     </div>
   `,
 })
 export class LoginComponent {
   readonly store = inject(PortfolioStoreService);
-
-  readonly modo = signal<'login' | 'registro'>('login');
   readonly enviando = signal<boolean>(false);
 
-  nombre = '';
   email = '';
   clave = '';
 
-  cambiarModo(nuevo: 'login' | 'registro'): void {
-    this.modo.set(nuevo);
+  constructor() {
     this.store.errorGlobal.set(null);
   }
 
@@ -124,16 +152,12 @@ export class LoginComponent {
     if (this.enviando()) return;
     const correo = this.email.trim();
     if (!correo || !this.clave) {
-      this.store.notificarError('Introduce tu correo y contraseña.');
+      this.store.notificarError('Introduce tu correo electrónico y contraseña.');
       return;
     }
     this.enviando.set(true);
     try {
-      if (this.modo() === 'login') {
-        await this.store.login(correo, this.clave);
-      } else {
-        await this.store.registro(this.nombre.trim(), correo, this.clave);
-      }
+      await this.store.login(correo, this.clave);
     } finally {
       this.enviando.set(false);
     }

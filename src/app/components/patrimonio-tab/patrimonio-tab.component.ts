@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import {
   AgrupacionDistId,
   PortfolioStoreService,
@@ -9,6 +10,7 @@ import {
 import { FormatService } from '../../services/format.service';
 import { ChartRenderFn, ChartService } from '../../services/chart.service';
 import { SvgChartComponent } from '../svg-chart/svg-chart.component';
+import { ObjetivoModalComponent } from '../modals/objetivo-modal/objetivo-modal.component';
 import { GrupoAgrupado, ProductoCalculado } from '../../models/portfolio.model';
 
 interface FilaAportacionTabla {
@@ -25,7 +27,7 @@ interface FilaAportacionTabla {
 
 @Component({
   selector: 'cap-patrimonio-tab',
-  imports: [FormsModule, SvgChartComponent],
+  imports: [FormsModule, SvgChartComponent, ObjetivoModalComponent],
   template: `
     @if (store.datos(); as d) {
       @if (d.modo === 'demo') {
@@ -644,39 +646,8 @@ interface FilaAportacionTabla {
         </section>
       }
 
-      <!-- MODAL EDITAR OBJETIVO -->
-      @if (store.modalObjetivoAbierto()) {
-        <div class="modal-backdrop" (click)="store.modalObjetivoAbierto.set(false)">
-          <div class="modal-card" (click)="$event.stopPropagation()">
-            <div class="modal-header">
-              <h3>Objetivo y titular de la cartera</h3>
-              <button type="button" class="btn-cerrar" (click)="store.modalObjetivoAbierto.set(false)">✕</button>
-            </div>
-            <form (ngSubmit)="guardarObjetivoModal()" class="modal-body">
-              <div class="campo">
-                <label for="obj-titular">Nombre o título de la cartera</label>
-                <input id="obj-titular" type="text" [(ngModel)]="objTitular" name="titular" required />
-              </div>
-              <div class="campo">
-                <label for="obj-etiqueta">Etiqueta de la meta</label>
-                <input id="obj-etiqueta" type="text" [(ngModel)]="objEtiqueta" name="etiqueta" placeholder="Ej. Libertad financiera / Primeros 100.000 €" />
-              </div>
-              <div class="campo">
-                <label for="obj-importe">Importe objetivo (€)</label>
-                <input id="obj-importe" type="number" min="0" step="1000" [(ngModel)]="objImporte" name="importe" required />
-              </div>
-              <label class="check-row">
-                <input type="checkbox" [(ngModel)]="objActivo" name="activo" />
-                <span>Mostrar barra de progreso del objetivo en el panel principal</span>
-              </label>
-              <div class="modal-footer">
-                <button type="button" class="btn-fantasma" (click)="store.modalObjetivoAbierto.set(false)">Cancelar</button>
-                <button type="submit" class="btn-primario">Guardar objetivo</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      }
+      <!-- MODAL EDITAR OBJETIVO (COMPONENTE SEPARADO) -->
+      <cap-objetivo-modal />
     }
   `,
 })
@@ -684,6 +655,7 @@ export class PatrimonioTabComponent {
   readonly store = inject(PortfolioStoreService);
   readonly fmt = inject(FormatService);
   private readonly chart = inject(ChartService);
+  private readonly router = inject(Router);
   protected readonly Math = Math;
 
   readonly vistasEvolucion: { id: VistaEvolucionId; etiqueta: string }[] = [
@@ -721,11 +693,6 @@ export class PatrimonioTabComponent {
   readonly limiteFilas = signal<number>(30);
 
   // Goal modal fields
-  objTitular = '';
-  objEtiqueta = '';
-  objImporte = 100000;
-  objActivo = true;
-
   constructor() {
     effect(() => {
       const d = this.store.datos();
@@ -1154,33 +1121,18 @@ export class PatrimonioTabComponent {
   });
 
   abrirModalObjetivo(): void {
-    const d = this.store.datos();
-    this.objTitular = d?.titular || 'Mi Cartera';
-    this.objEtiqueta = d?.objetivo?.etiqueta || 'Objetivo de patrimonio';
-    this.objImporte = d?.objetivo?.importe || 100000;
-    this.objActivo = d?.objetivo?.activo ?? true;
     this.store.modalObjetivoAbierto.set(true);
-  }
-
-  async guardarObjetivoModal(): Promise<void> {
-    const ok = await this.store.guardarObjetivo(
-      this.objTitular.trim() || 'Mi Cartera',
-      Number(this.objImporte) || 0,
-      this.objEtiqueta.trim() || 'Objetivo de patrimonio',
-      this.objActivo
-    );
-    if (ok) {
-      this.store.modalObjetivoAbierto.set(false);
-    }
   }
 
   irANuevoProducto(): void {
     this.store.subTabDatos.set('productos');
     this.store.tabActiva.set('datos');
+    void this.router.navigate(['/datos']);
   }
 
   irAImportar(): void {
     this.store.subTabDatos.set('importar');
     this.store.tabActiva.set('datos');
+    void this.router.navigate(['/datos']);
   }
 }

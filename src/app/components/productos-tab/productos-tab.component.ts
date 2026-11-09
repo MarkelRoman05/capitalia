@@ -1,4 +1,5 @@
 import { Component, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
 import { ChartRenderFn, ChartService } from '../../services/chart.service';
@@ -7,16 +8,16 @@ import { ProductoCalculado } from '../../models/portfolio.model';
 
 @Component({
   selector: 'cap-productos-tab',
-  imports: [SvgChartComponent],
+  imports: [SvgChartComponent, RouterLink],
   template: `
     @if (store.datos(); as d) {
       @if (!d.productos || !d.productos.length) {
         <section class="panel-card vacio-bloque">
           <h2>No hay fondos, ETFs ni acciones con seguimiento de compras</h2>
           <p>Ve a la pestaña «Mis datos» para añadir tus primeros productos de inversión.</p>
-          <button type="button" class="btn-primario" (click)="store.tabActiva.set('datos')">
+          <a routerLink="/datos" class="btn-primario" (click)="store.tabActiva.set('datos')">
             Ir a Mis datos
-          </button>
+          </a>
         </section>
       } @else {
         <!-- SELECTOR DE PRODUCTO -->

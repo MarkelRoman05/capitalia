@@ -1,5 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
+import { Router } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
 import {
   CarteraConfig,
@@ -34,6 +35,8 @@ export interface ConfirmacionDialog {
 export class PortfolioStoreService {
   private readonly http = inject(HttpClient);
   private readonly fmt = inject(FormatService);
+  private readonly router = inject(Router);
+  private initPromise: Promise<void> | null = null;
 
   // Auth state
   readonly cargandoInicial = signal<boolean>(true);
@@ -449,10 +452,19 @@ export class PortfolioStoreService {
   irAProducto(id: string): void {
     this.productoSeleccionadoId.set(id);
     this.tabActiva.set('fondos');
+    void this.router.navigate(['/productos']);
   }
 
   // Initial load & Authentication
   async inicializarApp(): Promise<void> {
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+    this.initPromise = this._ejecutarInicializarApp();
+    return this.initPromise;
+  }
+
+  private async _ejecutarInicializarApp(): Promise<void> {
     this.cargandoInicial.set(true);
     try {
       const resp = await firstValueFrom(
@@ -485,6 +497,7 @@ export class PortfolioStoreService {
         this.usuario.set(resp.usuario);
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
         this.notificarExito(`Bienvenido de nuevo, ${resp.usuario.nombre || resp.usuario.email}`);
+        void this.router.navigate(['/patrimonio']);
         return true;
       }
       return false;
@@ -512,6 +525,7 @@ export class PortfolioStoreService {
         this.usuario.set(resp.usuario);
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
         this.notificarExito('Cuenta creada correctamente en Capitalia.');
+        void this.router.navigate(['/patrimonio']);
         return true;
       }
       return false;
@@ -533,6 +547,7 @@ export class PortfolioStoreService {
     this.usuario.set(null);
     this.datos.set(null);
     this.cartera.set(null);
+    void this.router.navigate(['/login']);
   }
 
   // Portfolio & Dashboard API calls
@@ -814,6 +829,7 @@ export class PortfolioStoreService {
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.tabActiva.set('datos');
+      void this.router.navigate(['/datos']);
       this.notificarExito('Tu cartera personal está lista para editar.');
     } catch (err: unknown) {
       this.notificarError(
