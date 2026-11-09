@@ -80,17 +80,34 @@ CAB_MYINVESTOR = {"fecha": ["fecha fiscal", "fecha"],
                   "valor": ["valor de mercado", "valor mercado", "valor"]}
 
 
-def leer_csv_myinvestor(texto):
+def _celda(v):
+    """Celda de Excel o CSV -> texto; las fechas, en dd/mm/aaaa para el regex de abajo."""
+    if isinstance(v, (dt.datetime, dt.date)):
+        return v.strftime("%d/%m/%Y")
+    return "" if v is None else str(v)
+
+
+def leer_csv_myinvestor(nombre, contenido):
     """
-    Lee el CSV "Plusvalías y minusvalías" de un fondo de MyInvestor.
+    Lee el extracto "Plusvalías y minusvalías" de un fondo de MyInvestor, en CSV o Excel.
     Devuelve (lotes, reembolsos): lotes = [[fecha, coste, valor]] de lo que sigues
     teniendo; reembolsos = [[fecha, resultado]] de lo ya vendido, del que el extracto
     solo da la plusvalía.
     """
-    texto = decodifica(texto)
-    delim = ";" if texto.count(";") >= texto.count(",") else ","
-    filas = [f for f in csv.reader(io.StringIO(texto), delimiter=delim)
-             if any((c or "").strip() for c in f)]
+    try:
+        if nombre and nombre.lower().endswith((".xlsx", ".xlsm")):
+            from openpyxl import load_workbook
+            libro = load_workbook(io.BytesIO(contenido), data_only=True, read_only=True)
+            hoja = libro["Movimientos"] if "Movimientos" in libro.sheetnames else libro.worksheets[0]
+            filas = [list(f) for f in hoja.iter_rows(values_only=True)]
+        else:
+            texto = decodifica(contenido)
+            delim = ";" if texto.count(";") >= texto.count(",") else ","
+            filas = list(csv.reader(io.StringIO(texto), delimiter=delim))
+    except Exception:
+        return [], []
+    filas = [[_celda(c) for c in f] for f in filas]
+    filas = [f for f in filas if any(c.strip() for c in f)]
     if not filas:
         return [], []
 
@@ -158,9 +175,12 @@ def leer_tabla(nombre, contenido):
     """Excel (.xlsx), CSV o texto pegado -> [(número de fila, {columna: valor})]."""
     if nombre and nombre.lower().endswith((".xlsx", ".xlsm")):
         from openpyxl import load_workbook
-        libro = load_workbook(io.BytesIO(contenido), data_only=True, read_only=True)
-        hoja = libro["Movimientos"] if "Movimientos" in libro.sheetnames else libro.worksheets[0]
-        filas = [list(f) for f in hoja.iter_rows(values_only=True)]
+        try:
+            libro = load_workbook(io.BytesIO(contenido), data_only=True, read_only=True)
+            hoja = libro["Movimientos"] if "Movimientos" in libro.sheetnames else libro.worksheets[0]
+            filas = [list(f) for f in hoja.iter_rows(values_only=True)]
+        except Exception:
+            return [], "No he podido leer el Excel: comprueba que el archivo no está dañado."
     else:
         texto = decodifica(contenido)
         # Lo que devuelve una IA suele venir dentro de un bloque ``` ... ```.
@@ -405,23 +425,26 @@ def preparar_tabla(cfg, filas, carpeta):
     return plan
 
 
-def preparar_myinvestor(cfg, archivos, carpeta):
+def preparar_myinvestor(cfg, archivos, carpeta, producto_por_defecto=None):
     """[(nombre de archivo, bytes)] de MyInvestor -> Plan. Cada archivo sustituye lo que se
     importó antes de ese fondo, porque el extracto siempre trae la foto completa."""
     plan = Plan()
     res = Resolutor(cfg, plan, carpeta)
     for nombre, contenido in archivos:
         m = re.search(r"([A-Z]{2}[A-Z0-9]{9}\d)", (nombre or "").upper())
-        if not m:
+        if m:
+            ref = res.producto(nombre, m.group(1), "", "fondo")
+        elif producto_por_defecto and almacen.producto(cfg, producto_por_defecto):
+            ref = producto_por_defecto
+        else:
             plan.error(nombre, "No encuentro el ISIN en el nombre del archivo. Descárgalo otra vez de "
-                               "MyInvestor sin cambiarle el nombre (lleva el ISIN del fondo).")
+                               "MyInvestor sin cambiarle el nombre (lleva el ISIN del fondo) o elige "
+                               "un «Producto por defecto».")
             continue
-        isin = m.group(1)
-        lotes, reembolsos = leer_csv_myinvestor(contenido)
+        lotes, reembolsos = leer_csv_myinvestor(nombre, contenido)
         if not lotes and not reembolsos:
             plan.error(nombre, "No parece un extracto «Plusvalías y minusvalías» de MyInvestor, o está vacío.")
             continue
-        ref = res.producto(nombre, isin, "", "fondo")
         if not ref:
             continue
         p = res.datos(ref)
@@ -432,8 +455,8 @@ def preparar_myinvestor(cfg, archivos, carpeta):
         serie = res.serie(ref, lotes[-1][0] if lotes else None)
         movs, sin_vl = myinvestor_a_movimientos(ref, lotes, reembolsos, serie)
         if sin_vl:
-            plan.avisos.append(f"{isin}: {sin_vl} compras sin valor liquidativo de ese día; sus "
-                               "participaciones se han estimado con el valor del extracto.")
+            plan.avisos.append(f"{p.get('corto') or p['nombre']}: {sin_vl} compras sin valor liquidativo "
+                               "de ese día; sus participaciones se han estimado con el valor del extracto.")
         plan.reemplazar.append((ref, "myinvestor"))
         for mv in movs:
             plan.movimientos.append({**mv, "fila": nombre, "comision": None, "marcas": [],

@@ -499,10 +499,12 @@ def api_importar_previsualizar():
             elif item.get("contenido") is not None:
                 archivos.append((nom, str(item["contenido"]).encode("utf-8")))
         texto = (datos_json.get("texto") or "").strip()
+        producto_por_defecto = datos_json.get("productoPorDefecto")
     else:
         origen = request.form.get("origen")
         archivos = [(os.path.basename(f.filename), f.read()) for f in request.files.getlist("archivos") if f.filename]
         texto = (request.form.get("texto") or "").strip()
+        producto_por_defecto = request.form.get("productoPorDefecto")
 
     carpeta_motor = dir_trabajo_motor()
     with cerrojo:
@@ -510,7 +512,7 @@ def api_importar_previsualizar():
         if origen == "myinvestor":
             if not archivos:
                 return jsonify(ok=False, error="Elige los archivos CSV descargados de MyInvestor.", errores=["Elige los archivos CSV descargados de MyInvestor."]), 400
-            plan = importar.preparar_myinvestor(cfg, archivos, carpeta_motor)
+            plan = importar.preparar_myinvestor(cfg, archivos, carpeta_motor, producto_por_defecto)
         else:
             if not archivos and not texto:
                 return jsonify(ok=False, error="Elige un archivo o pega el texto generado por la IA.", errores=["Elige un archivo o pega el texto generado por la IA."]), 400

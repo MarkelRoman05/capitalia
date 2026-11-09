@@ -401,13 +401,13 @@ interface ArchivoLeido {
           @if (modoImportar() === 'myinvestor') {
             <div class="import-box">
               <p>
-                Exporta tus órdenes o movimientos en formato CSV desde MyInvestor y selecciónalos
-                aquí. Si el archivo incluye el código ISIN, Capitalia creará y vinculará cada fondo
-                automáticamente.
+                Descarga el extracto «Plusvalías y minusvalías» de cada fondo en CSV o Excel y
+                selecciónalos aquí. Si el nombre del archivo incluye el código ISIN, Capitalia
+                creará y vinculará cada fondo automáticamente.
               </p>
               <div class="form-grid-2" style="margin-top: 1rem">
                 <div class="campo">
-                  <label for="imp-files-my">Archivos CSV de MyInvestor</label>
+                  <label for="imp-files-my">Archivos de MyInvestor (CSV o Excel)</label>
                   <input
                     id="imp-files-my"
                     type="file"
