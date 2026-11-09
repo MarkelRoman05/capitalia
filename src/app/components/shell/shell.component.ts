@@ -4,10 +4,11 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { FooterComponent } from '../footer/footer.component';
 import { ConfirmModalComponent } from '../modals/confirm-modal/confirm-modal.component';
+import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.component';
 
 @Component({
   selector: 'cap-shell',
-  imports: [RouterOutlet, NavbarComponent, FooterComponent, ConfirmModalComponent],
+  imports: [RouterOutlet, NavbarComponent, FooterComponent, ConfirmModalComponent, PerfilModalComponent],
   host: {
     '(document:keydown)': 'onKeydown($event)',
   },
@@ -61,6 +62,7 @@ import { ConfirmModalComponent } from '../modals/confirm-modal/confirm-modal.com
     </div>
 
     <cap-confirm-modal />
+    <cap-perfil-modal />
   `,
 })
 export class ShellComponent {

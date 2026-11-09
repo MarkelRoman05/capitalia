@@ -310,6 +310,67 @@ def por_id(uid):
         return _publico(cur.fetchone())
 
 
+def actualizar_usuario(uid, nombre=None, email=None, password_actual=None, password_nueva=None):
+    """Actualiza nombre, correo y/o contraseña. Cambiar correo o clave exige la contraseña actual."""
+    if not uid:
+        raise ErrorUsuario(["Tu sesión ha caducado. Inicia sesión de nuevo."])
+
+    with _conectar() as con, con.cursor() as cur:
+        cur.execute(
+            "SELECT id, email, nombre, password_hash, creado FROM usuarios WHERE id = %s",
+            (uid,),
+        )
+        fila = cur.fetchone()
+        if not fila:
+            raise ErrorUsuario(["No se ha encontrado la cuenta."])
+
+        errores = []
+        nuevo_email = fila["email"]
+        if email is not None and (email or "").strip().lower() != fila["email"]:
+            candidato = (email or "").strip().lower()
+            if not RE_EMAIL.match(candidato):
+                errores.append("Escribe un correo electrónico válido.")
+            else:
+                nuevo_email = candidato
+
+        nueva_clave = password_nueva or ""
+        if nueva_clave and (len(nueva_clave) < MIN_CLAVE or len(nueva_clave) > MAX_CLAVE):
+            errores.append(f"La contraseña debe tener entre {MIN_CLAVE} y {MAX_CLAVE} caracteres.")
+
+        # Tocar el correo o la contraseña siempre requiere la contraseña actual.
+        if (nuevo_email != fila["email"] or nueva_clave) and not check_password_hash(
+            fila["password_hash"], password_actual or ""
+        ):
+            errores.append("La contraseña actual no es correcta.")
+
+        nuevo_nombre = fila["nombre"]
+        if nombre is not None:
+            nuevo_nombre = (nombre or "").strip()[:MAX_NOMBRE]
+
+        if errores:
+            raise ErrorUsuario(errores)
+
+        try:
+            cur.execute(
+                "UPDATE usuarios SET email = %s, nombre = %s, password_hash = %s "
+                "WHERE id = %s RETURNING id, email, nombre, creado",
+                (
+                    nuevo_email,
+                    nuevo_nombre,
+                    generate_password_hash(nueva_clave) if nueva_clave else fila["password_hash"],
+                    uid,
+                ),
+            )
+            actualizado = cur.fetchone()
+            con.commit()
+            return _publico(actualizado)
+        except Exception as e:
+            if "duplicate key" in str(e).lower() or "usuarios_email_key" in str(e):
+                raise ErrorUsuario(["Ya existe una cuenta registrada con ese correo electrónico."])
+            logging.exception("Error actualizando usuario %s", uid)
+            raise ErrorUsuario(["No se ha podido actualizar el perfil en este momento."])
+
+
 # ---------------------------------------------------------------- carteras en PostgreSQL
 
 def _sincronizar_relacional(cur, uid, cfg):

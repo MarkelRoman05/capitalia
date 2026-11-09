@@ -267,6 +267,33 @@ def auth_yo():
     return jsonify(autenticado=bool(u), modo="nube", usuario=u)
 
 
+@app.post("/api/auth/perfil")
+def auth_perfil():
+    if not db.activo():
+        return jsonify(ok=False, errores=["El perfil no está disponible sin PostgreSQL."]), 400
+    ip = request.remote_addr or "local"
+    if not _comprobar_rate_limit(f"perfil:{ip}"):
+        return jsonify(ok=False, errores=["Demasiados intentos seguidos. Espera un minuto."]), 429
+    uid = session.get("usuario_id")
+    if not uid:
+        return jsonify(ok=False, errores=["Tu sesión ha caducado. Inicia sesión de nuevo."]), 401
+    datos = request.get_json(silent=True) or {}
+    try:
+        u = db.actualizar_usuario(
+            uid,
+            nombre=datos.get("nombre"),
+            email=datos.get("email"),
+            password_actual=datos.get("passwordActual") or datos.get("password_actual"),
+            password_nueva=datos.get("passwordNueva") or datos.get("password_nueva"),
+        )
+    except db.ErrorUsuario as e:
+        return jsonify(ok=False, errores=e.errores), 400
+    except Exception:
+        logging.exception("Fallo al actualizar el perfil del usuario %s", uid)
+        return jsonify(ok=False, errores=["No se ha podido actualizar el perfil en este momento."]), 500
+    return jsonify(ok=True, usuario=u)
+
+
 # ---------------------------------------------------------------- API del Panel y Cartera
 
 @app.get("/api/panel")

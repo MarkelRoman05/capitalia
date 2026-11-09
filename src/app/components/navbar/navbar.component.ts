@@ -1,7 +1,6 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PortfolioStoreService, TabId } from '../../services/portfolio-store.service';
-import { FormatService } from '../../services/format.service';
 
 export interface NavItem {
   id: TabId;
@@ -14,148 +13,204 @@ export interface NavItem {
   selector: 'cap-navbar',
   imports: [RouterLink, RouterLinkActive],
   styles: [':host { display: contents; }'],
+  host: {
+    '(document:click)': 'cerrarMenu()',
+    '(document:keydown.escape)': 'cerrarMenu()',
+  },
   template: `
-    <aside class="sidebar" aria-label="Barra lateral de navegación">
-      <a routerLink="/patrimonio" class="brand-group" aria-label="Ir a Patrimonio">
-        <div class="brand-logo-wrap">
-          <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
-            <rect width="32" height="32" rx="8" fill="currentColor" opacity="0.16" />
-            <path
-              d="M7 22V12m6 10V15m6 7V8m6 14V11"
-              stroke="currentColor"
-              stroke-width="2.6"
-              stroke-linecap="round"
-            />
-          </svg>
-        </div>
-        <span class="brand-texts">
-          <span class="brand-name">Capitalia</span>
-          <span class="brand-sub">{{ store.datos()?.titular || 'Private Wealth' }}</span>
-        </span>
-      </a>
-
-      @if (store.datos(); as d) {
-        <div class="sidebar-patrimonio-mini hide-mobile">
-          <span class="spm-label">Patrimonio neto</span>
-          <strong class="spm-val valor-privado">{{ fmt.eur(d.total.patrimonio, 0) }}</strong>
-          @if (d.total.tir !== null) {
-            <span class="spm-badge" [class]="fmt.claseSigno(d.total.tir)">
-              TIR {{ fmt.pctSigno(d.total.tir, 1) }}
-            </span>
-          }
-        </div>
-      }
-
-      <div class="sidebar-section-label hide-mobile">MENÚ PRINCIPAL</div>
-
-      <nav class="main-nav" aria-label="Navegación principal">
-        @for (p of pestanas; track p.id) {
-          <a
-            [routerLink]="p.ruta"
-            routerLinkActive="on"
-            #rla="routerLinkActive"
-            class="nav-tab"
-            [class.solo-edicion]="p.id === 'datos'"
-            [attr.aria-current]="rla.isActive ? 'page' : null"
-            (click)="store.tabActiva.set(p.id)"
-          >
-            <svg
-              class="nav-ico"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.85"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              aria-hidden="true"
-            >
-              @switch (p.id) {
-                @case ('patrimonio') {
-                  <path d="M3 20h18M6 20V10m6 10V4m6 16v-7" />
-                }
-                @case ('mes') {
-                  <rect x="4" y="5" width="16" height="15" rx="2" />
-                  <path d="M4 10h16M9 3v4m6-4v4" />
-                }
-                @case ('fondos') {
-                  <circle cx="12" cy="12" r="8" />
-                  <path d="M12 4v8l5.5 3.5" />
-                }
-                @case ('rendimiento') {
-                  <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />
-                }
-                @case ('datos') {
-                  <path
-                    d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm4 5h6m-6 4h6m-6 4h3"
-                  />
-                }
-                @case ('ayuda') {
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01" />
-                }
-              }
+    <header class="topbar">
+      <div class="topbar-inner">
+        <a routerLink="/patrimonio" class="brand-group" aria-label="Ir a Patrimonio">
+          <span class="brand-logo-wrap">
+            <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
+              <rect width="32" height="32" rx="8" fill="currentColor" opacity="0.14" />
+              <path
+                d="M7 22V12m6 10V15m6 7V8m6 14V11"
+                stroke="currentColor"
+                stroke-width="2.6"
+                stroke-linecap="round"
+              />
             </svg>
-            <span class="nav-label">{{ p.etiqueta }}</span>
-            <kbd class="nav-kbd">{{ p.tecla }}</kbd>
-          </a>
-        }
-      </nav>
+          </span>
+          <span class="brand-texts">
+            <span class="brand-name">Capitalia</span>
+            <span class="brand-sub">{{ store.datos()?.titular || 'Private Wealth' }}</span>
+          </span>
+        </a>
 
-      <div class="sidebar-foot">
-        <button
-          type="button"
-          class="side-btn side-btn-primary solo-edicion"
-          [disabled]="store.actualizandoPrecios()"
-          (click)="store.actualizarPrecios()"
-          title="Sincronizar las últimas cotizaciones de mercado"
-        >
-          <span [class.girando]="store.actualizandoPrecios()" aria-hidden="true">↻</span>
-          <span>{{ store.actualizandoPrecios() ? 'Sincronizando…' : 'Actualizar precios' }}</span>
-        </button>
+        <nav class="main-nav" aria-label="Navegación principal">
+          @for (p of pestanas; track p.id) {
+            <a
+              [routerLink]="p.ruta"
+              routerLinkActive="on"
+              #rla="routerLinkActive"
+              class="nav-tab"
+              [class.solo-edicion]="p.id === 'datos'"
+              [attr.aria-current]="rla.isActive ? 'page' : null"
+              (click)="store.tabActiva.set(p.id)"
+            >
+              <svg
+                class="nav-ico"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.85"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                aria-hidden="true"
+              >
+                @switch (p.id) {
+                  @case ('patrimonio') {
+                    <path d="M3 20h18M6 20V10m6 10V4m6 16v-7" />
+                  }
+                  @case ('mes') {
+                    <rect x="4" y="5" width="16" height="15" rx="2" />
+                    <path d="M4 10h16M9 3v4m6-4v4" />
+                  }
+                  @case ('fondos') {
+                    <circle cx="12" cy="12" r="8" />
+                    <path d="M12 4v8l5.5 3.5" />
+                  }
+                  @case ('rendimiento') {
+                    <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />
+                  }
+                  @case ('datos') {
+                    <path
+                      d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm4 5h6m-6 4h6m-6 4h3"
+                    />
+                  }
+                  @case ('ayuda') {
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01" />
+                  }
+                }
+              </svg>
+              <span class="nav-label">{{ p.etiqueta }}</span>
+              <kbd class="nav-kbd">{{ p.tecla }}</kbd>
+            </a>
+          }
+        </nav>
 
-        <div class="side-row">
+        <div class="topbar-actions">
           <button
             type="button"
-            class="side-btn side-btn-sm"
+            class="btn-secundario btn-sm solo-edicion topbar-btn"
+            [disabled]="store.actualizandoPrecios()"
+            (click)="store.actualizarPrecios()"
+            title="Sincronizar las últimas cotizaciones de mercado"
+            [attr.aria-label]="
+              store.actualizandoPrecios() ? 'Sincronizando precios' : 'Actualizar precios'
+            "
+          >
+            <span [class.girando]="store.actualizandoPrecios()" aria-hidden="true">↻</span>
+          </button>
+
+          <button
+            type="button"
+            class="btn-fantasma btn-sm topbar-btn"
             [class.on]="store.modoVideo()"
             (click)="store.alternarModoVideo()"
             title="Modo presentación (Atajo: V)"
           >
             <span aria-hidden="true">{{ store.modoVideo() ? '◉' : '◎' }}</span>
-            <span>Presentar</span>
+            <span class="topbar-label">Presentar</span>
           </button>
-          <button
-            type="button"
-            class="side-btn side-btn-sm"
-            (click)="store.alternarTema()"
-            title="Cambiar tema visual (Atajo: L)"
-          >
-            <span aria-hidden="true">{{ store.tema() === 'oscuro' ? '☀' : '☾' }}</span>
-            <span>{{ store.tema() === 'oscuro' ? 'Claro' : 'Oscuro' }}</span>
-          </button>
-        </div>
 
-        @if (store.usuario(); as u) {
-          <div class="user-chip solo-edicion">
-            <span class="user-avatar" aria-hidden="true">{{
-              (u.nombre || u.email)[0].toUpperCase()
-            }}</span>
-            <div class="user-meta">
-              <span class="user-name">{{ u.nombre || u.email }}</span>
-              <span class="user-role">Sesión activa</span>
+          @if (store.usuario(); as u) {
+            <div class="user-menu" (click)="$event.stopPropagation()">
+              <button
+                type="button"
+                class="user-menu-btn"
+                [attr.aria-expanded]="menuAbierto()"
+                aria-haspopup="menu"
+                (click)="alternarMenu()"
+                title="Cuenta y ajustes"
+              >
+                <span class="user-avatar" aria-hidden="true">{{
+                  (u.nombre || u.email)[0].toUpperCase()
+                }}</span>
+                <span class="user-menu-name">{{ u.nombre || u.email }}</span>
+                <svg class="user-menu-caret" viewBox="0 0 12 12" aria-hidden="true">
+                  <path
+                    d="M2.5 4.5 6 8l3.5-3.5"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.6"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                  />
+                </svg>
+              </button>
+
+              @if (menuAbierto()) {
+                <div class="user-menu-panel" role="menu">
+                  <div class="user-menu-head">
+                    <span class="user-avatar" aria-hidden="true">{{
+                      (u.nombre || u.email)[0].toUpperCase()
+                    }}</span>
+                    <span class="user-menu-head-txt">
+                      <strong>{{ u.nombre || 'Sin nombre' }}</strong>
+                      <small>{{ u.email }}</small>
+                    </span>
+                  </div>
+
+                  <button
+                    type="button"
+                    class="user-menu-item"
+                    role="menuitem"
+                    (click)="abrirPerfil()"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M12 20h9" />
+                      <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                    </svg>
+                    Modificar perfil
+                  </button>
+
+                  <button
+                    type="button"
+                    class="user-menu-item"
+                    role="menuitem"
+                    (click)="store.alternarTema()"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      @if (store.tema() === 'oscuro') {
+                        <circle cx="12" cy="12" r="4.5" />
+                        <path d="M12 2.5v2M12 19.5v2M2.5 12h2M19.5 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19" />
+                      } @else {
+                        <path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5a8.5 8.5 0 1 0 11 11Z" />
+                      }
+                    </svg>
+                    Tema
+                    <span class="um-val">{{ store.tema() === 'oscuro' ? 'Claro' : 'Oscuro' }}</span>
+                  </button>
+
+                  <div class="user-menu-sep"></div>
+
+                  <button
+                    type="button"
+                    class="user-menu-item user-menu-danger"
+                    role="menuitem"
+                    (click)="cerrarMenu(); store.logout()"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M10 17l5-5-5-5M15 12H3M21 4v16a2 2 0 0 1-2 2H5" />
+                    </svg>
+                    Cerrar sesión
+                  </button>
+                </div>
+              }
             </div>
-            <button type="button" class="btn-salir" (click)="store.logout()" title="Cerrar sesión">
-              Salir
-            </button>
-          </div>
-        }
+          }
+        </div>
       </div>
-    </aside>
+    </header>
   `,
 })
 export class NavbarComponent {
   readonly store = inject(PortfolioStoreService);
-  readonly fmt = inject(FormatService);
+
+  readonly menuAbierto = signal(false);
 
   readonly pestanas: NavItem[] = [
     { id: 'patrimonio', ruta: '/patrimonio', etiqueta: 'Patrimonio', tecla: '1' },
@@ -165,4 +220,17 @@ export class NavbarComponent {
     { id: 'datos', ruta: '/datos', etiqueta: 'Mis datos', tecla: '5' },
     { id: 'ayuda', ruta: '/ayuda', etiqueta: 'Ayuda', tecla: '6' },
   ];
+
+  alternarMenu(): void {
+    this.menuAbierto.update((v) => !v);
+  }
+
+  cerrarMenu(): void {
+    this.menuAbierto.set(false);
+  }
+
+  abrirPerfil(): void {
+    this.cerrarMenu();
+    this.store.modalPerfilAbierto.set(true);
+  }
 }

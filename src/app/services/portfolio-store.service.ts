@@ -58,6 +58,7 @@ export class PortfolioStoreService {
   readonly actualizandoPrecios = signal<boolean>(false);
   readonly confirmacionActiva = signal<ConfirmacionDialog | null>(null);
   readonly modalObjetivoAbierto = signal<boolean>(false);
+  readonly modalPerfilAbierto = signal<boolean>(false);
 
   // UI state
   readonly tabActiva = signal<TabId>('patrimonio');
@@ -533,6 +534,30 @@ export class PortfolioStoreService {
       const msg = this.extraerMensajeError(err, 'No se pudo crear la cuenta.');
       this.notificarError(msg);
       return false;
+    }
+  }
+
+  async actualizarPerfil(datos: {
+    nombre?: string;
+    email?: string;
+    passwordActual?: string;
+    passwordNueva?: string;
+  }): Promise<string | null> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.post<{ ok: boolean; usuario: Usuario; errores?: string[] }>(
+          '/api/auth/perfil',
+          datos
+        )
+      );
+      if (resp.ok) {
+        this.usuario.set(resp.usuario);
+        this.notificarExito('Perfil actualizado correctamente.');
+        return null;
+      }
+      return resp.errores?.[0] || 'No se pudo actualizar el perfil.';
+    } catch (err: unknown) {
+      return this.extraerMensajeError(err, 'No se pudo actualizar el perfil.');
     }
   }
 
