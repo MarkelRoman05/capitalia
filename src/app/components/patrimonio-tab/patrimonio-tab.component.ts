@@ -67,6 +67,9 @@ interface FilaAportacionTabla {
         <!-- HERO PATRIMONIO -->
         <section class="hero-patrimonio">
           <div class="hero-izq">
+            @if (saludo()) {
+              <p class="hero-saludo">{{ saludo() }}</p>
+            }
             <div class="hero-kicker">
               <span>{{ store.filtrando() ? 'Patrimonio filtrado (' + store.visibles().length + ' de ' + store.todosComponentes().length + ')' : 'Patrimonio neto' }}</span>
               @if (ajusteVivoEur() !== 0) {
@@ -657,6 +660,13 @@ export class PatrimonioTabComponent {
   private readonly chart = inject(ChartService);
   private readonly router = inject(Router);
   protected readonly Math = Math;
+
+  readonly saludo = computed(() => {
+    const u = this.store.usuario();
+    if (!u) return '';
+    const nombre = (u.nombre || '').trim() || u.email.split('@')[0];
+    return nombre ? `Hola, ${nombre}` : '';
+  });
 
   readonly vistasEvolucion: { id: VistaEvolucionId; etiqueta: string }[] = [
     { id: 'apilado', etiqueta: 'Apilado' },
