@@ -107,7 +107,7 @@ export class FormatService {
     const p = ym.split('-');
     if (p.length < 2) return ym;
     const m = MESES_LARGOS[+p[1] - 1] ?? '';
-    return `${m.charAt(0).toUpperCase() + m.slice(1)} de ${p[0]}`;
+    return `${m.charAt(0).toUpperCase() + m.slice(1)} ${p[0]}`;
   }
 
   claseSigno(v: number | null | undefined): string {

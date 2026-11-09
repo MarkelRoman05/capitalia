@@ -41,11 +41,6 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
             <strong class="asc-val">Fondos · ETFs · Cripto · Inmuebles</strong>
             <span class="asc-sub">Seguimiento automático por ISIN/ticker y saldos manuales</span>
           </div>
-          <div class="auth-showcase-card">
-            <span class="asc-label">Privacidad Total</span>
-            <strong class="asc-val">PostgreSQL Autojospedado</strong>
-            <span class="asc-sub">Puntos de restauración instantáneos antes de cada cambio</span>
-          </div>
         </div>
 
         <ul class="auth-pitch-list">
@@ -77,7 +72,6 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
 
           @if (store.errorGlobal()) {
             <div class="auth-alert" role="alert">
-              <span aria-hidden="true">⚠</span>
               <span>{{ store.errorGlobal() }}</span>
             </div>
           }
@@ -138,9 +132,6 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
             <a routerLink="/login" class="btn-link">Iniciar sesión</a>
           </div>
 
-          <div class="auth-footer">
-            <span>🔒 Contraseñas protegidas con sal única y PBKDF2-HMAC-SHA256</span>
-          </div>
         </div>
       </section>
     </div>

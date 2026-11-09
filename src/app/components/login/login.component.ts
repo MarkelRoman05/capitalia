@@ -57,9 +57,6 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
             Importación directa desde MyInvestor, plantillas Excel/CSV o extractos bancarios con IA
           </li>
           <li>
-            Base de datos PostgreSQL dedicada con copias de seguridad automáticas por operación
-          </li>
-          <li>
             Modo presentación instantáneo para compartir métricas ocultando importes sensibles
           </li>
         </ul>
@@ -82,7 +79,6 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
 
           @if (store.errorGlobal()) {
             <div class="auth-alert" role="alert">
-              <span aria-hidden="true">⚠</span>
               <span>{{ store.errorGlobal() }}</span>
             </div>
           }
@@ -127,10 +123,6 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
           <div class="auth-switch-prompt">
             <span>¿Todavía no tienes cuenta en Capitalia?</span>
             <a routerLink="/registro" class="btn-link">Crear una cuenta gratis</a>
-          </div>
-
-          <div class="auth-footer">
-            <span>🔒 Sesiones firmadas HttpOnly · Cifrado PBKDF2-HMAC-SHA256</span>
           </div>
         </div>
       </section>

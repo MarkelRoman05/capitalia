@@ -4,7 +4,15 @@ This project was generated using [Angular CLI](https://github.com/angular/angula
 
 ## Development server
 
-To start a local development server, run:
+To start the backend (Flask) and the frontend together, run:
+
+```bash
+npm run dev
+```
+
+Then open `http://localhost:4200/`: `/api/*` is proxied to the backend on port 8766.
+
+To start only the frontend, run:
 
 ```bash
 ng serve
