@@ -187,7 +187,7 @@ def recalcula(descargar="faltan"):
     with cerrojo:
         modo_actual, cfg, _, est = obtener_estado_usuario()
         datos = motor.construir(cfg, carpeta_motor, descargar=descargar)
-        if descargar is True:
+        if descargar is True or not est.get("preciosActualizados"):
             est["preciosActualizados"] = dt.datetime.now().replace(microsecond=0).isoformat()
         if datos is not None:
             datos["modo"] = modo_actual
@@ -331,6 +331,21 @@ def api_actualizar():
         return jsonify(ok=False, error=f"No he podido actualizar los precios: {e}", errores=[f"No he podido actualizar los precios: {e}"]), 500
     _, cfg, _, _ = obtener_estado_usuario()
     return jsonify(ok=True, datos=datos, panel=datos, cartera=cfg, avisos=(datos or {}).get("avisos", []))
+
+
+@app.get("/api/precios-vivo")
+def api_precios_vivo():
+    _, cfg, _, _ = obtener_estado_usuario()
+    try:
+        precios = motor.obtener_precios_vivo(cfg.get("productos", []))
+    except Exception:
+        logging.exception("Fallo al obtener precios en tiempo real")
+        precios = {}
+    return jsonify(
+        ok=True,
+        actualizado=dt.datetime.now().replace(microsecond=0).isoformat(),
+        precios=precios,
+    )
 
 
 @app.get("/api/cartera")

@@ -73,9 +73,24 @@ export class PortfolioStoreService {
   readonly mesSeleccionadoIdx = signal<number>(-1);
   readonly compRef = signal<string>('msci_world');
   readonly btcVivo = signal<number | null>(null);
+  readonly preciosVivo = signal<Record<string, number>>({});
+  readonly ultimaActualizacion = signal<string | null>(null);
 
   private temporizadorMensaje: ReturnType<typeof setTimeout> | null = null;
   private intervaloVivo: ReturnType<typeof setInterval> | null = null;
+  private intervaloFondos: ReturnType<typeof setInterval> | null = null;
+  private ultimaSyncFondosMs = 0;
+  private listenerVisibilidadRegistrado = false;
+  private readonly onVisibilityChange = (): void => {
+    if (typeof document === 'undefined' || document.visibilityState !== 'visible') return;
+    if (!this.autenticado()) return;
+    if (this.hayActivosEnVivo()) {
+      void this.actualizarPrecioVivo();
+    }
+    if (!this.carteraVacia() && Date.now() - this.ultimaSyncFondosMs > 5 * 60 * 1000) {
+      void this.actualizarPrecios({ silencioso: true });
+    }
+  };
 
   constructor() {
     this.inicializarTema();
@@ -192,6 +207,50 @@ export class PortfolioStoreService {
       (d.pasivos?.length || 0) === 0
     );
   });
+
+  readonly hayActivosEnVivo = computed<boolean>(() => {
+    const d = this.datos();
+    if (!d) return false;
+    if (d.vivo) return true;
+    const fuentesCfg = new Map(
+      (this.cartera()?.productos || []).map((c) => [c.id, c.fuente])
+    );
+    return (d.productos || []).some((p) => {
+      const f = fuentesCfg.get(p.id);
+      const esVivo =
+        f === 'yahoo' ||
+        f === 'coingecko' ||
+        p.fuentePrecio === 'Yahoo Finance' ||
+        p.fuentePrecio === 'CoinGecko';
+      return esVivo && (p.participaciones ?? p.titulos ?? 0) > 0;
+    });
+  });
+
+  valorProductoConVivo(p: ProductoCalculado): number {
+    const livePrice = this.preciosVivo()[p.id];
+    const titulos = p.participaciones ?? p.titulos ?? 0;
+    if (livePrice && livePrice > 0 && titulos > 0) {
+      return titulos * livePrice;
+    }
+    const d = this.datos();
+    const eurVivo = this.btcVivo();
+    if (d?.vivo && eurVivo && p.id === d.vivo.productoId && d.vivo.btcRef > 0) {
+      return d.vivo.titulos * d.vivo.precioRef * (eurVivo / d.vivo.btcRef);
+    }
+    return p.valor;
+  }
+
+  precioProductoConVivo(p: ProductoCalculado): number | null | undefined {
+    const livePrice = this.preciosVivo()[p.id];
+    if (livePrice && livePrice > 0) {
+      return livePrice;
+    }
+    return p.nav;
+  }
+
+  ajusteVivoProducto(p: ProductoCalculado): number {
+    return this.valorProductoConVivo(p) - (p.valor || 0);
+  }
 
   readonly metricasTodo = computed<MetricasCalculadas>(() => {
     return this.calcularMetricas(this.todosComponentes());
@@ -477,6 +536,7 @@ export class PortfolioStoreService {
 
       if (resp.autenticado) {
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
+        this.autoActualizarAlEntrar();
       }
     } catch {
       this.autenticado.set(false);
@@ -497,6 +557,7 @@ export class PortfolioStoreService {
         this.autenticado.set(true);
         this.usuario.set(resp.usuario);
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
+        this.autoActualizarAlEntrar();
         this.notificarExito(`Bienvenido de nuevo, ${resp.usuario.nombre || resp.usuario.email}`);
         void this.router.navigate(['/patrimonio']);
         return true;
@@ -525,6 +586,7 @@ export class PortfolioStoreService {
         this.autenticado.set(true);
         this.usuario.set(resp.usuario);
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
+        this.autoActualizarAlEntrar();
         this.notificarExito('Cuenta creada correctamente en Capitalia.');
         void this.router.navigate(['/patrimonio']);
         return true;
@@ -568,6 +630,8 @@ export class PortfolioStoreService {
       // ignore
     }
     this.detenerPollingVivo();
+    this.preciosVivo.set({});
+    this.ultimaActualizacion.set(null);
     this.autenticado.set(false);
     this.usuario.set(null);
     this.datos.set(null);
@@ -707,6 +771,10 @@ export class PortfolioStoreService {
             rawPanel?.titular || titularFallback || this.cartera()?.titular || 'Mi cartera'
           );
     this.datos.set(panel);
+    const tsPanel = panel.preciosActualizados || panel.generado || null;
+    if (tsPanel && (!this.ultimaActualizacion() || tsPanel > this.ultimaActualizacion()!)) {
+      this.ultimaActualizacion.set(tsPanel);
+    }
     if (panel.productos?.length && !this.productoSeleccionadoId()) {
       this.productoSeleccionadoId.set(panel.productos[0].id);
     } else if (
@@ -730,14 +798,32 @@ export class PortfolioStoreService {
     this.iniciarPollingVivo();
   }
 
+  private autoActualizarAlEntrar(): void {
+    if (!this.autenticado() || this.carteraVacia()) return;
+    void this.actualizarPrecios({ silencioso: true });
+  }
+
   private iniciarPollingVivo(): void {
     this.detenerPollingVivo();
-    const v = this.datos()?.vivo;
-    if (!v) return;
-    this.actualizarPrecioVivo();
-    this.intervaloVivo = setInterval(() => {
-      this.actualizarPrecioVivo();
-    }, 60000);
+    if (typeof document !== 'undefined' && !this.listenerVisibilidadRegistrado) {
+      document.addEventListener('visibilitychange', this.onVisibilityChange);
+      this.listenerVisibilidadRegistrado = true;
+    }
+    if (this.hayActivosEnVivo()) {
+      void this.actualizarPrecioVivo();
+      this.intervaloVivo = setInterval(() => {
+        if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+          void this.actualizarPrecioVivo();
+        }
+      }, 15000);
+    }
+    if (!this.carteraVacia()) {
+      this.intervaloFondos = setInterval(() => {
+        if (typeof document === 'undefined' || document.visibilityState === 'visible') {
+          void this.actualizarPrecios({ silencioso: true });
+        }
+      }, 10 * 60 * 1000);
+    }
   }
 
   private detenerPollingVivo(): void {
@@ -745,12 +831,43 @@ export class PortfolioStoreService {
       clearInterval(this.intervaloVivo);
       this.intervaloVivo = null;
     }
+    if (this.intervaloFondos) {
+      clearInterval(this.intervaloFondos);
+      this.intervaloFondos = null;
+    }
+    if (typeof document !== 'undefined' && this.listenerVisibilidadRegistrado) {
+      document.removeEventListener('visibilitychange', this.onVisibilityChange);
+      this.listenerVisibilidadRegistrado = false;
+    }
   }
 
   async actualizarPrecioVivo(): Promise<void> {
     const d = this.datos();
-    const v = d?.vivo;
-    if (!d || !v) return;
+    if (!d || !this.hayActivosEnVivo()) return;
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<{
+          ok: boolean;
+          actualizado?: string;
+          precios?: Record<string, number>;
+        }>('/api/precios-vivo')
+      );
+      const precios = resp?.precios || {};
+      if (Object.keys(precios).length > 0) {
+        this.preciosVivo.set(precios);
+        if (resp.actualizado) {
+          this.ultimaActualizacion.set(resp.actualizado);
+        }
+        if (d.vivo && precios[d.vivo.productoId]) {
+          this.btcVivo.set(precios[d.vivo.productoId]);
+        }
+        return;
+      }
+    } catch {
+      // Fallback al polling directo de CoinGecko si el backend no responde
+    }
+    const v = d.vivo;
+    if (!v) return;
     const coin = v.coin || 'bitcoin';
     let eur: number | null = null;
     try {
@@ -779,20 +896,30 @@ export class PortfolioStoreService {
     this.btcVivo.set(eur);
   }
 
-  async actualizarPrecios(): Promise<void> {
+  async actualizarPrecios(opciones?: { silencioso?: boolean }): Promise<void> {
     if (this.actualizandoPrecios()) return;
     this.actualizandoPrecios.set(true);
     try {
       const resp = await firstValueFrom(
         this.http.post<{ ok: boolean; panel: DatosPanel | null }>('/api/actualizar', {})
       );
+      this.ultimaSyncFondosMs = Date.now();
       this.aplicarNuevoPanel(resp.panel ?? null);
+      if (resp.panel?.preciosActualizados || resp.panel?.generado) {
+        this.ultimaActualizacion.set(
+          resp.panel.preciosActualizados || resp.panel.generado
+        );
+      }
       await this.cargarCarteraConfig();
-      this.notificarExito('Precios de mercado y series históricas actualizados.');
+      if (!opciones?.silencioso) {
+        this.notificarExito('Precios de mercado y series históricas actualizados.');
+      }
     } catch (err: unknown) {
-      this.notificarError(
-        this.extraerMensajeError(err, 'Error al actualizar precios.')
-      );
+      if (!opciones?.silencioso) {
+        this.notificarError(
+          this.extraerMensajeError(err, 'Error al actualizar precios.')
+        );
+      }
     } finally {
       this.actualizandoPrecios.set(false);
     }

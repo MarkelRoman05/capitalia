@@ -764,7 +764,55 @@ body {
 .hero-der {
   flex: 0 1 340px;
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: center;
+  gap: 0.45rem;
+}
+
+.actualizacion-meta {
+  display: inline-flex;
   align-items: center;
+  justify-content: flex-end;
+  gap: 0.42rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+  line-height: 1.2;
+}
+
+.actualizacion-meta strong {
+  color: var(--txt-2);
+  font-weight: 600;
+}
+
+.actualizacion-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.actualizacion-dot.en-vivo {
+  background: var(--pos);
+  box-shadow: 0 0 0 2px var(--pos-bg);
+}
+
+.actualizacion-dot.actualizando {
+  background: var(--gold);
+  animation: pulso-vivo 1.2s ease-in-out infinite;
+}
+
+@keyframes pulso-vivo {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.45;
+    transform: scale(0.85);
+  }
 }
 
 .objetivo-box {
@@ -2458,6 +2506,9 @@ input[type='range'] { accent-color: var(--primary); }
   gap: 0.5rem;
   font-size: 0.9rem;
 }
+.footer-logo {
+  color: var(--primary);
+}
 .footer-dot {
   width: 7px;
   height: 7px;
@@ -2572,7 +2623,8 @@ input[type='range'] { accent-color: var(--primary); }
   align-items: center;
   gap: 0.75rem;
 }
-.auth-brand-badge .brand-logo {
+.auth-brand-badge .brand-logo,
+.auth-brand-badge .brand-logo svg {
   width: 40px;
   height: 40px;
   flex: none;

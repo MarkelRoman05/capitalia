@@ -417,6 +417,135 @@ def descargar_coingecko(coin, dias=365):
     return previo
 
 
+def precio_yahoo_vivo(simbolo):
+    """Obtiene el ultimo precio de mercado intradia de Yahoo Finance para un simbolo."""
+    if not simbolo:
+        return None
+    url = (
+        "https://query1.finance.yahoo.com/v8/finance/chart/"
+        f"{urllib.parse.quote(simbolo)}?range=1d&interval=1m"
+    )
+    try:
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            bruto = json.loads(resp.read().decode("utf-8", "replace"))
+        meta = bruto["chart"]["result"][0]["meta"]
+        precio = meta.get("regularMarketPrice")
+        if precio is not None and float(precio) > 0:
+            return float(precio)
+    except Exception:
+        return None
+    return None
+
+
+def precios_coingecko_vivo(coins):
+    """Obtiene precios en EUR en tiempo real de CoinGecko (con respaldo Binance para BTC)."""
+    unicos = sorted({c for c in coins if c})
+    if not unicos:
+        return {}
+    out = {}
+    try:
+        ids = urllib.parse.quote(",".join(unicos))
+        url = f"https://api.coingecko.com/api/v3/simple/price?ids={ids}&vs_currencies=eur"
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            datos = json.loads(resp.read().decode("utf-8", "replace"))
+        for c in unicos:
+            val = (datos.get(c) or {}).get("eur")
+            if val is not None and float(val) > 0:
+                out[c] = float(val)
+    except Exception:
+        pass
+    if "bitcoin" in unicos and "bitcoin" not in out:
+        try:
+            req = urllib.request.Request(
+                "https://api.binance.com/api/v3/ticker/price?symbol=BTCEUR",
+                headers=UA,
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:
+                j = json.loads(resp.read().decode("utf-8", "replace"))
+            val = float(j.get("price") or 0)
+            if val > 0:
+                out["bitcoin"] = val
+        except Exception:
+            pass
+    return out
+
+
+def obtener_precios_vivo(productos_cfg):
+    """Devuelve {producto_id: precio_eur_vivo} en paralelo para acciones, ETFs y cripto."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    simbolos_yh = set()
+    coins_cg = set()
+    for p in productos_cfg or []:
+        f = p.get("fuente")
+        cod = p.get("codigo")
+        if f == "yahoo" and cod:
+            simbolos_yh.add(cod)
+            fx_sim, _ = simbolo_fx(p.get("moneda"))
+            if fx_sim:
+                simbolos_yh.add(fx_sim)
+            if p.get("respaldo"):
+                simbolos_yh.add(p["respaldo"])
+                fx_resp, _ = simbolo_fx(p.get("respaldoMoneda"))
+                if fx_resp:
+                    simbolos_yh.add(fx_resp)
+        elif f == "coingecko" and cod:
+            coins_cg.add(cod)
+        if p.get("vivo"):
+            coins_cg.add(p["vivo"])
+
+    if not simbolos_yh and not coins_cg:
+        return {}
+
+    precios_yh = {}
+    precios_cg = {}
+    max_workers = min(8, max(1, len(simbolos_yh) + (1 if coins_cg else 0)))
+    with ThreadPoolExecutor(max_workers=max_workers) as pool:
+        fut_yh = {s: pool.submit(precio_yahoo_vivo, s) for s in simbolos_yh}
+        fut_cg = pool.submit(precios_coingecko_vivo, coins_cg) if coins_cg else None
+        for s, fut in fut_yh.items():
+            try:
+                val = fut.result()
+                if val is not None:
+                    precios_yh[s] = val
+            except Exception:
+                pass
+        if fut_cg is not None:
+            try:
+                precios_cg = fut_cg.result() or {}
+            except Exception:
+                precios_cg = {}
+
+    resultado = {}
+    for p in productos_cfg or []:
+        pid = p.get("id")
+        if not pid:
+            continue
+        f = p.get("fuente")
+        cod = p.get("codigo")
+        if f == "yahoo" and cod:
+            px = precios_yh.get(cod)
+            mon = p.get("moneda")
+            if px is None and p.get("respaldo"):
+                px = precios_yh.get(p["respaldo"])
+                mon = p.get("respaldoMoneda")
+            if px is not None:
+                fx_sim, factor = simbolo_fx(mon)
+                if fx_sim:
+                    fx_val = precios_yh.get(fx_sim)
+                    if fx_val:
+                        resultado[pid] = r4(px * factor * fx_val)
+                else:
+                    resultado[pid] = r4(px * factor)
+        elif f == "coingecko" and cod:
+            px = precios_cg.get(cod)
+            if px is not None:
+                resultado[pid] = r4(px)
+    return resultado
+
+
 # ---------------------------------------------------------------- modelo
 
 TIPOS = {

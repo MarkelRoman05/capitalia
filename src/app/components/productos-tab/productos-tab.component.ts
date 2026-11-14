@@ -31,7 +31,7 @@ import { ProductoCalculado } from '../../models/portfolio.model';
             >
               <span class="dot" [style.background]="colorPrimario(p)"></span>
               <span>{{ p.corto || p.nombre }}</span>
-              <span class="pill-val valor-privado">{{ fmt.eurCompacto(p.valor) }}</span>
+              <span class="pill-val valor-privado">{{ fmt.eurCompacto(store.valorProductoConVivo(p)) }}</span>
             </button>
           }
         </section>
@@ -70,7 +70,7 @@ import { ProductoCalculado } from '../../models/portfolio.model';
 
               <div class="ficha-valor-der">
                 <span class="kpi-label">Valor actual de la posición</span>
-                <div class="ficha-cifra valor-privado">{{ fmt.eur(p.valor, 2) }}</div>
+                <div class="ficha-cifra valor-privado">{{ fmt.eur(store.valorProductoConVivo(p), 2) }}</div>
                 <div class="hero-badges">
                   @if (p.plusvalia !== null && p.plusvalia !== undefined) {
                     <span class="chip-rent" [class]="fmt.claseSigno(p.plusvalia)">
@@ -105,9 +105,11 @@ import { ProductoCalculado } from '../../models/portfolio.model';
               <div class="ficha-kpi">
                 <span>{{ p.etqPrecio || 'Cotización actual' }}</span>
                 <strong class="mono valor-privado">
-                  {{ p.nav ? fmt.eur(p.nav, 2) : '—' }}
+                  {{ store.precioProductoConVivo(p) ? fmt.eur(store.precioProductoConVivo(p), 2) : '—' }}
                 </strong>
-                @if (p.navFecha) {
+                @if (store.preciosVivo()[p.id]) {
+                  <small class="muted">en tiempo real</small>
+                } @else if (p.navFecha) {
                   <small class="muted">al {{ fmt.fechaCorta(p.navFecha) }}</small>
                 }
               </div>

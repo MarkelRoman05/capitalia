@@ -72,8 +72,8 @@ interface FilaAportacionTabla {
             }
             <div class="hero-kicker">
               <span>{{ store.filtrando() ? 'Patrimonio filtrado (' + store.visibles().length + ' de ' + store.todosComponentes().length + ')' : 'Patrimonio neto' }}</span>
-              @if (ajusteVivoEur() !== 0) {
-                <span class="vivo-pill" title="Cotización cripto en tiempo real">
+              @if (ajusteVivoEur() !== 0 || store.hayActivosEnVivo()) {
+                <span class="vivo-pill" title="Cotizaciones en tiempo real">
                   <span class="vivo-dot"></span> En vivo
                 </span>
               }
@@ -117,6 +117,24 @@ interface FilaAportacionTabla {
           </div>
 
           <div class="hero-der">
+            <div
+              class="actualizacion-meta"
+              [title]="store.actualizandoPrecios() ? 'Sincronizando cotizaciones de mercado…' : 'Fecha y hora de la última actualización'"
+            >
+              <span
+                class="actualizacion-dot"
+                [class.actualizando]="store.actualizandoPrecios()"
+                [class.en-vivo]="!store.actualizandoPrecios() && store.hayActivosEnVivo()"
+              ></span>
+              @if (store.actualizandoPrecios()) {
+                <span>Actualizando datos…</span>
+              } @else if (store.ultimaActualizacion()) {
+                <span>Actualizado: <strong class="mono">{{ fmt.fechaHora(store.ultimaActualizacion()) }}</strong></span>
+              } @else {
+                <span>Sin actualizar</span>
+              }
+            </div>
+
             @if (d.objetivo && d.objetivo.activo && d.objetivo.importe > 0) {
               <div class="objetivo-box">
                 <div class="objetivo-cab">
@@ -721,15 +739,9 @@ export class PatrimonioTabComponent {
   });
 
   readonly ajusteVivoEur = computed<number>(() => {
-    const d = this.store.datos();
-    const eurVivo = this.store.btcVivo();
-    if (!d?.vivo || !eurVivo) return 0;
-    const vis = this.store.visibles();
-    const prodVivo = vis.find((c) => c.id === d.vivo!.productoId);
-    if (!prodVivo || !d.vivo.btcRef) return 0;
-    const factor = eurVivo / d.vivo.btcRef;
-    const nuevoValor = d.vivo.titulos * d.vivo.precioRef * factor;
-    return nuevoValor - prodVivo.valor;
+    return this.store
+      .visibles()
+      .reduce((acc, c) => acc + this.store.ajusteVivoProducto(c), 0);
   });
 
   readonly patrimonioMostrado = computed<number>(() => {
@@ -784,21 +796,18 @@ export class PatrimonioTabComponent {
   }
 
   valorComponenteVivo(c: ProductoCalculado): number {
-    const d = this.store.datos();
-    const eurVivo = this.store.btcVivo();
-    if (d?.vivo && eurVivo && c.id === d.vivo.productoId && d.vivo.btcRef > 0) {
-      return d.vivo.titulos * d.vivo.precioRef * (eurVivo / d.vivo.btcRef);
-    }
-    return c.valor;
+    return this.store.valorProductoConVivo(c);
   }
 
   pesoComponente(c: ProductoCalculado): number {
     const posTotal = this.store
       .todosComponentes()
-      .filter((x) => x.valor > 0)
-      .reduce((s, x) => s + x.valor, 0);
-    if (posTotal <= 0 || c.valor <= 0) return 0;
-    return c.valor / posTotal;
+      .map((x) => this.store.valorProductoConVivo(x))
+      .filter((v) => v > 0)
+      .reduce((s, v) => s + v, 0);
+    const val = this.store.valorProductoConVivo(c);
+    if (posTotal <= 0 || val <= 0) return 0;
+    return val / posTotal;
   }
 
   onClickPill(ev: MouseEvent, id: string): void {

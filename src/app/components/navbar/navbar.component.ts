@@ -1,6 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PortfolioStoreService, TabId } from '../../services/portfolio-store.service';
+import { LogoComponent } from '../logo/logo.component';
 
 export interface NavItem {
   id: TabId;
@@ -11,7 +12,7 @@ export interface NavItem {
 
 @Component({
   selector: 'cap-navbar',
-  imports: [RouterLink, RouterLinkActive],
+  imports: [RouterLink, RouterLinkActive, LogoComponent],
   styles: [':host { display: contents; }'],
   host: {
     '(document:click)': 'cerrarMenu()',
@@ -22,19 +23,10 @@ export interface NavItem {
       <div class="topbar-inner">
         <a routerLink="/patrimonio" class="brand-group" aria-label="Ir a Patrimonio">
           <span class="brand-logo-wrap">
-            <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
-              <rect width="32" height="32" rx="8" fill="currentColor" opacity="0.14" />
-              <path
-                d="M7 22V12m6 10V15m6 7V8m6 14V11"
-                stroke="currentColor"
-                stroke-width="2.6"
-                stroke-linecap="round"
-              />
-            </svg>
+            <cap-logo class="brand-logo" [size]="30" />
           </span>
           <span class="brand-texts">
             <span class="brand-name">Capitalia</span>
-            <span class="brand-sub">{{ store.datos()?.titular || 'Private Wealth' }}</span>
           </span>
         </a>
 

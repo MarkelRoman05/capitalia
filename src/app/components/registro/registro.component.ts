@@ -2,24 +2,17 @@ import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
+import { LogoComponent } from '../logo/logo.component';
 
 @Component({
   selector: 'cap-registro',
-  imports: [FormsModule, RouterLink],
+  imports: [FormsModule, RouterLink, LogoComponent],
   template: `
     <div class="auth-screen">
       <section class="auth-pitch">
         <div class="auth-pitch-top">
           <div class="auth-brand-badge">
-            <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true">
-              <rect width="32" height="32" rx="8" fill="currentColor" opacity="0.16" />
-              <path
-                d="M7 22V12m6 10V15m6 7V8m6 14V11"
-                stroke="currentColor"
-                stroke-width="2.6"
-                stroke-linecap="round"
-              />
-            </svg>
+            <cap-logo class="brand-logo" [size]="40" variant="dark" />
             <div class="auth-brand-texts">
               <span class="auth-brand-name">Capitalia</span>
               <span class="auth-brand-tag">Private Wealth &amp; Quant Analytics</span>
