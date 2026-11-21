@@ -49,9 +49,6 @@ import { LogoComponent } from '../logo/logo.component';
           <li>
             Importación directa desde MyInvestor, plantillas Excel/CSV o extractos bancarios con IA
           </li>
-          <li>
-            Modo presentación instantáneo para compartir métricas ocultando importes sensibles
-          </li>
         </ul>
       </section>
 

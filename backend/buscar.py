@@ -154,10 +154,22 @@ def buscar(texto):
         return []
     cands = []
 
-    def añade(fuente, codigo, nombre, tipo, identificador=None, vivo=None, mercado=None):
+    def _extraer_ficha(fila):
+        raw = {
+            "ter": fila.get("OngoingCharge"),
+            "riesgo": fila.get("CollectedSRRI"),
+            "clase": fila.get("CategoryName"),
+            "gestora": fila.get("BrandingCompanyName"),
+        }
+        return {k: v for k, v in raw.items() if v not in (None, "")}
+
+    def añade(fuente, codigo, nombre, tipo, identificador=None, vivo=None, mercado=None, ficha=None):
         if not any(c["fuente"] == fuente and c["codigo"] == codigo for c in cands):
-            cands.append({"fuente": fuente, "codigo": codigo, "nombre": nombre, "tipo": tipo,
-                          "identificador": identificador or codigo, "vivo": vivo, "bolsa": mercado})
+            item = {"fuente": fuente, "codigo": codigo, "nombre": nombre, "tipo": tipo,
+                    "identificador": identificador or codigo, "vivo": vivo, "bolsa": mercado}
+            if ficha:
+                item["ficha"] = ficha
+            cands.append(item)
 
     if q.lower() in ATAJOS:
         cod, nombre = ATAJOS[q.lower()]
@@ -173,7 +185,8 @@ def buscar(texto):
                        if x["symbol"].startswith("0P")), None)
         for f in filas:
             if f.get("Universe", "").startswith("FO"):
-                añade("morningstar", cero_p or f["SecId"], f.get("Name"), "fondo", isin)
+                añade("morningstar", cero_p or f["SecId"], f.get("Name"), "fondo", isin,
+                      ficha=_extraer_ficha(f))
                 cero_p = None
         if cero_p:
             añade("morningstar", cero_p, None, "fondo", isin)
@@ -194,10 +207,13 @@ def buscar(texto):
         for f in filas:
             if f.get("Universe", "").startswith("FO") or f.get("PriceCurrency") != "EUR":
                 continue
+            ficha_etf = _extraer_ficha(f)
             bolsa, sufijo = BOLSAS.get((f.get("ExchangeId") or "")[-4:], (None, None))
             if sufijo and f.get("Ticker"):
-                añade("yahoo", f["Ticker"] + sufijo, f.get("Name"), "etf", isin)
-            añade("morningstar", f["SecId"], f.get("Name"), "etf", isin, mercado=bolsa)
+                añade("yahoo", f["Ticker"] + sufijo, f.get("Name"), "etf", isin,
+                      mercado=bolsa, ficha=ficha_etf)
+            añade("morningstar", f["SecId"], f.get("Name"), "etf", isin,
+                  mercado=bolsa, ficha=ficha_etf)
     else:
         monedas = _intenta(cg_buscar, q)
         for x in _intenta(yahoo_buscar, q):
@@ -218,15 +234,37 @@ def buscar(texto):
             for c in [c for c in monedas if c.get("market_cap_rank")][:3]:
                 añade("coingecko", c["id"], c.get("name"), "cripto",
                       (c.get("symbol") or "").upper(), vivo=c["id"])
+        # Búsqueda por texto también en Morningstar (fondos y ETFs europeos en EUR).
+        if len(q) >= 3:
+            ms_filas = [
+                f for f in _intenta(ms_buscar, q)
+                if f.get("SecId") and (
+                    f.get("PriceCurrency") in (None, "", "EUR")
+                    or f.get("Universe", "").startswith("FO")
+                )
+            ][:5]
+            for f in ms_filas:
+                ficha_ms = _extraer_ficha(f)
+                ident = f.get("isin") or f.get("Ticker") or f["SecId"]
+                if f.get("Universe", "").startswith("FO"):
+                    añade("morningstar", f["SecId"], f.get("Name"), "fondo", ident, ficha=ficha_ms)
+                else:
+                    bolsa, sufijo = BOLSAS.get((f.get("ExchangeId") or "")[-4:], (None, None))
+                    if sufijo and f.get("Ticker"):
+                        añade("yahoo", f["Ticker"] + sufijo, f.get("Name"), "etf", ident,
+                              mercado=bolsa, ficha=ficha_ms)
+                    añade("morningstar", f["SecId"], f.get("Name"), "etf", ident,
+                          mercado=bolsa, ficha=ficha_ms)
 
-    # Ficha del fondo o ETF según Morningstar: comisión anual, riesgo, categoría y gestora.
+    # Ficha del fondo o ETF según Morningstar: respaldo global si alguna fila no la traía.
     if ES_ISIN.match(q.upper()):
         f = next((f for f in filas if f.get("OngoingCharge") is not None or f.get("CollectedSRRI")), None)
         if f:
-            ficha = {"ter": f.get("OngoingCharge"), "riesgo": f.get("CollectedSRRI"),
-                     "clase": f.get("CategoryName"), "gestora": f.get("BrandingCompanyName")}
-            for c in cands:
-                c["ficha"] = {k: v for k, v in ficha.items() if v not in (None, "")}
+            ficha_global = _extraer_ficha(f)
+            if ficha_global:
+                for c in cands:
+                    if not c.get("ficha"):
+                        c["ficha"] = ficha_global
 
     cands = cands[:12]
     with ThreadPoolExecutor(max_workers=8) as ex:
@@ -244,3 +282,79 @@ def buscar(texto):
     salida.sort(key=lambda c: (c["fuente"] != "morningstar" or c["tipo"] != "fondo",
                                c["codigo"].upper() != exacto, c.get("moneda") != "EUR"))
     return salida
+
+
+_CACHE_BANCOS = {}
+
+
+def buscar_bancos(texto):
+    """Busca bancos y entidades financieras en la API pública de Brandfetch."""
+    q = (texto or "").strip()
+    if len(q) < 2:
+        return []
+    clave = q.lower()
+    if clave in _CACHE_BANCOS:
+        return _CACHE_BANCOS[clave]
+
+    url = f"https://api.brandfetch.io/v2/search/{urllib.parse.quote(q)}"
+    try:
+        datos = _get(url, timeout=8)
+    except Exception:
+        return []
+    if not isinstance(datos, list):
+        return []
+
+    salida = []
+    vistos = set()
+    for item in datos:
+        if not isinstance(item, dict):
+            continue
+        nombre = (item.get("name") or "").strip()
+        dominio = (item.get("domain") or "").strip().lower()
+        if not nombre or not dominio:
+            continue
+        if dominio in vistos or nombre.lower() in vistos:
+            continue
+        vistos.add(dominio)
+        vistos.add(nombre.lower())
+
+        icono = (item.get("icon") or "").strip()
+        if not icono.startswith("https://"):
+            icono = f"https://www.google.com/s2/favicons?domain={urllib.parse.quote(dominio)}&sz=128"
+
+        salida.append({
+            "nombre": nombre,
+            "dominio": dominio,
+            "logo": icono,
+            "verificado": bool(item.get("verified")),
+        })
+        if len(salida) >= 10:
+            break
+
+    _CACHE_BANCOS[clave] = salida
+    return salida
+
+
+def resolver_logo_brandfetch(dominio, nombre=""):
+    """Resuelve la URL oficial del logo en Brandfetch a partir de dominio o nombre."""
+    dom = (dominio or "").strip().lower()
+    stem = dom.split(".")[0] if "." in dom else dom
+    consultas = []
+    for q in (dom, (nombre or "").strip(), stem):
+        if q and len(q) >= 2 and q.lower() not in {x.lower() for x in consultas}:
+            consultas.append(q)
+
+    respaldo = None
+    for q in consultas:
+        for item in buscar_bancos(q):
+            logo = item.get("logo") or ""
+            item_dom = (item.get("dominio") or "").lower()
+            if "cdn.brandfetch.io" not in logo:
+                continue
+            if dom and (item_dom == dom or item_dom.endswith("." + dom)):
+                return logo
+            if respaldo is None and (
+                not stem or stem in item_dom or stem in (item.get("nombre") or "").lower()
+            ):
+                respaldo = logo
+    return respaldo

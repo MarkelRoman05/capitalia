@@ -38,47 +38,6 @@ interface PreguntaAyuda {
       </section>
 
       <div>
-        <section class="panel-card bloque-seccion">
-          <span class="hero-kicker">Atajos</span>
-          <h2 class="card-title">Atajos de teclado</h2>
-          <p class="card-sub" style="margin-bottom: 1rem">
-            Navega por las pestañas y modos de visualización sin usar el ratón:
-          </p>
-
-          <table class="tabla-compacta">
-            <thead>
-              <tr>
-                <th>Tecla</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr>
-                <td><kbd>1</kbd> … <kbd>6</kbd></td>
-                <td>Cambiar rápidamente entre las 6 pestañas principales</td>
-              </tr>
-              <tr>
-                <td><kbd>V</kbd></td>
-                <td>
-                  Activar / desactivar el Modo Vídeo / Presentación (oculta controles de edición)
-                </td>
-              </tr>
-              <tr>
-                <td><kbd>L</kbd></td>
-                <td>Alternar entre tema Oscuro (Obsidian) y Claro (Alabaster)</td>
-              </tr>
-              <tr>
-                <td><kbd>Esc</kbd></td>
-                <td>Quitar cualquier filtro activo y volver a mostrar toda la cartera</td>
-              </tr>
-              <tr>
-                <td><kbd>Alt</kbd> + Clic</td>
-                <td>En una pastilla de filtro: aislar únicamente ese producto</td>
-              </tr>
-            </tbody>
-          </table>
-        </section>
-
         <section class="panel-card">
           <span class="hero-kicker">Tus datos</span>
           <h2 class="card-title">Tus datos en PostgreSQL</h2>

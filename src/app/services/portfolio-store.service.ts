@@ -6,12 +6,14 @@ import {
   CarteraConfig,
   CopiaSeguridad,
   DatosPanel,
+  EntidadBanco,
   InformeImportacion,
   MetricasCalculadas,
   MovimientoCfg,
   ProductoCalculado,
   ProductoCfg,
   RespuestaAuthYo,
+  RespuestaBancos,
   ResultadoBusqueda,
   Usuario,
   ValoracionCfg,
@@ -64,7 +66,6 @@ export class PortfolioStoreService {
   readonly tabActiva = signal<TabId>('patrimonio');
   readonly subTabDatos = signal<'productos' | 'movimientos' | 'saldos' | 'importar' | 'copias'>('productos');
   readonly tema = signal<'oscuro' | 'claro'>('oscuro');
-  readonly modoVideo = signal<boolean>(false);
   readonly rango = signal<RangoId>('todo');
   readonly vistaEvolucion = signal<VistaEvolucionId>('apilado');
   readonly agrupacionDist = signal<AgrupacionDistId>('clase');
@@ -75,6 +76,8 @@ export class PortfolioStoreService {
   readonly btcVivo = signal<number | null>(null);
   readonly preciosVivo = signal<Record<string, number>>({});
   readonly ultimaActualizacion = signal<string | null>(null);
+  readonly bancosCatalogo = signal<EntidadBanco[]>([]);
+  readonly bancosRecientes = signal<EntidadBanco[]>([]);
 
   private temporizadorMensaje: ReturnType<typeof setTimeout> | null = null;
   private intervaloVivo: ReturnType<typeof setInterval> | null = null;
@@ -102,10 +105,6 @@ export class PortfolioStoreService {
       if (guardado === 'claro' || guardado === 'oscuro') {
         this.tema.set(guardado);
       }
-      const videoGuardado = localStorage.getItem('capitalia-video');
-      if (videoGuardado === '1') {
-        this.modoVideo.set(true);
-      }
     } catch {
       // Ignore storage access errors
     }
@@ -115,7 +114,6 @@ export class PortfolioStoreService {
   aplicarAtributosDocumento(): void {
     if (typeof document === 'undefined') return;
     document.documentElement.setAttribute('data-theme', this.tema());
-    document.documentElement.setAttribute('data-video', this.modoVideo() ? '1' : '0');
   }
 
   alternarTema(): void {
@@ -123,17 +121,6 @@ export class PortfolioStoreService {
     this.tema.set(nuevo);
     try {
       localStorage.setItem('capitalia-tema', nuevo);
-    } catch {
-      // ignore
-    }
-    this.aplicarAtributosDocumento();
-  }
-
-  alternarModoVideo(): void {
-    const nuevo = !this.modoVideo();
-    this.modoVideo.set(nuevo);
-    try {
-      localStorage.setItem('capitalia-video', nuevo ? '1' : '0');
     } catch {
       // ignore
     }
@@ -1015,6 +1002,39 @@ export class PortfolioStoreService {
       })
     );
     return resp.resultados || [];
+  }
+
+  async cargarBancosIniciales(forzar = false): Promise<void> {
+    if (!forzar && this.bancosCatalogo().length) return;
+    try {
+      const resp = await firstValueFrom(this.http.get<RespuestaBancos>('/api/bancos'));
+      this.bancosRecientes.set(resp.recientes || []);
+      this.bancosCatalogo.set(resp.entidades || []);
+    } catch {
+      // Ignorar fallo silencioso al precargar catálogo de entidades
+    }
+  }
+
+  async buscarBancos(q: string): Promise<RespuestaBancos> {
+    const resp = await firstValueFrom(
+      this.http.get<RespuestaBancos>('/api/bancos', {
+        params: { q },
+      })
+    );
+    return {
+      recientes: resp.recientes || [],
+      entidades: resp.entidades || [],
+      online: resp.online || [],
+    };
+  }
+
+  async registrarUsoBanco(banco: Partial<EntidadBanco> & { nombre: string }): Promise<void> {
+    try {
+      await firstValueFrom(this.http.post<{ ok: boolean }>('/api/bancos/uso', banco));
+      await this.cargarBancosIniciales(true);
+    } catch {
+      // No bloquear si el registro de entidad reciente falla
+    }
   }
 
   async guardarProducto(

@@ -389,3 +389,18 @@ export interface MetricasCalculadas {
   serie: number[];
   serieAportado: number[];
 }
+
+export interface EntidadBanco {
+  id?: number | null;
+  nombre: string;
+  dominio?: string;
+  logo?: string;
+  categoria?: string;
+  verificado?: boolean;
+}
+
+export interface RespuestaBancos {
+  recientes: EntidadBanco[];
+  entidades: EntidadBanco[];
+  online: EntidadBanco[];
+}

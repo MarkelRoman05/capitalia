@@ -31,53 +31,133 @@ interface ArchivoLeido {
     @if (store.cartera(); as c) {
       <!-- SUB-NAVEGACIÓN DE MIS DATOS -->
       <div class="datos-subnav-bar">
-        <div class="seg-group" role="tablist" aria-label="Secciones de Mis datos">
+        <nav class="datos-tabs" role="tablist" aria-label="Secciones de Mis datos">
           <button
             type="button"
-            class="seg-btn"
+            role="tab"
+            class="datos-tab"
             [class.on]="store.subTabDatos() === 'productos'"
+            [attr.aria-selected]="store.subTabDatos() === 'productos'"
             (click)="cambiarSubTab('productos')"
           >
-            Productos ({{ c.productos.length }})
+            <svg
+              class="datos-tab-ico"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.85"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="7" height="7" rx="1.5" />
+              <rect x="14" y="3" width="7" height="7" rx="1.5" />
+              <rect x="3" y="14" width="7" height="7" rx="1.5" />
+              <rect x="14" y="14" width="7" height="7" rx="1.5" />
+            </svg>
+            <span>Productos</span>
+            <span class="datos-tab-badge">{{ c.productos.length }}</span>
           </button>
+
           <button
             type="button"
-            class="seg-btn"
+            role="tab"
+            class="datos-tab"
             [class.on]="store.subTabDatos() === 'movimientos'"
+            [attr.aria-selected]="store.subTabDatos() === 'movimientos'"
             (click)="cambiarSubTab('movimientos')"
           >
-            Compras y ventas ({{ c.movimientos.length }})
+            <svg
+              class="datos-tab-ico"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.85"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
+            </svg>
+            <span>Compras y ventas</span>
+            <span class="datos-tab-badge">{{ c.movimientos.length }}</span>
           </button>
+
           <button
             type="button"
-            class="seg-btn"
+            role="tab"
+            class="datos-tab"
             [class.on]="store.subTabDatos() === 'saldos'"
+            [attr.aria-selected]="store.subTabDatos() === 'saldos'"
             (click)="cambiarSubTab('saldos')"
           >
-            Saldos y valores ({{ c.valoraciones.length }})
+            <svg
+              class="datos-tab-ico"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.85"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+              <path d="M16 12h5v4h-5a2 2 0 0 1 0-4Z" />
+            </svg>
+            <span>Saldos y valores</span>
+            <span class="datos-tab-badge">{{ c.valoraciones.length }}</span>
           </button>
+
           <button
             type="button"
-            class="seg-btn"
+            role="tab"
+            class="datos-tab"
             [class.on]="store.subTabDatos() === 'importar'"
+            [attr.aria-selected]="store.subTabDatos() === 'importar'"
             (click)="cambiarSubTab('importar')"
           >
-            Importar datos
+            <svg
+              class="datos-tab-ico"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.85"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <path d="M17 8l-5-5-5 5M12 3v12" />
+            </svg>
+            <span>Importar datos</span>
           </button>
+
           <button
             type="button"
-            class="seg-btn"
+            role="tab"
+            class="datos-tab"
             [class.on]="store.subTabDatos() === 'copias'"
+            [attr.aria-selected]="store.subTabDatos() === 'copias'"
             (click)="cambiarSubTab('copias')"
           >
-            Copias y web
+            <svg
+              class="datos-tab-ico"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.85"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M12 3l7 3v5c0 5-3.5 8.5-7 10-3.5-1.5-7-5-7-10V6l7-3Z" />
+              <path d="M9.5 12l1.8 1.8L15 10" />
+            </svg>
+            <span>Copias y web</span>
           </button>
-        </div>
+        </nav>
 
         <div class="datos-acciones-globales">
-          <button type="button" class="btn-secundario btn-sm" (click)="store.cargarEjemplo()">
-            Cargar ejemplo
-          </button>
           <button
             type="button"
             class="btn-peligro-outline btn-sm"

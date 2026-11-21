@@ -7,7 +7,6 @@ export interface NavItem {
   id: TabId;
   ruta: string;
   etiqueta: string;
-  tecla: string;
 }
 
 @Component({
@@ -37,7 +36,6 @@ export interface NavItem {
               routerLinkActive="on"
               #rla="routerLinkActive"
               class="nav-tab"
-              [class.solo-edicion]="p.id === 'datos'"
               [attr.aria-current]="rla.isActive ? 'page' : null"
               (click)="store.tabActiva.set(p.id)"
             >
@@ -78,7 +76,6 @@ export interface NavItem {
                 }
               </svg>
               <span class="nav-label">{{ p.etiqueta }}</span>
-              <kbd class="nav-kbd">{{ p.tecla }}</kbd>
             </a>
           }
         </nav>
@@ -86,7 +83,7 @@ export interface NavItem {
         <div class="topbar-actions">
           <button
             type="button"
-            class="btn-secundario btn-sm solo-edicion topbar-btn"
+            class="btn-secundario btn-sm topbar-btn"
             [disabled]="store.actualizandoPrecios()"
             (click)="store.actualizarPrecios()"
             title="Sincronizar las últimas cotizaciones de mercado"
@@ -95,17 +92,6 @@ export interface NavItem {
             "
           >
             <span [class.girando]="store.actualizandoPrecios()" aria-hidden="true">↻</span>
-          </button>
-
-          <button
-            type="button"
-            class="btn-fantasma btn-sm topbar-btn"
-            [class.on]="store.modoVideo()"
-            (click)="store.alternarModoVideo()"
-            title="Modo presentación (Atajo: V)"
-          >
-            <span aria-hidden="true">{{ store.modoVideo() ? '◉' : '◎' }}</span>
-            <span class="topbar-label">Presentar</span>
           </button>
 
           @if (store.usuario(); as u) {
@@ -205,12 +191,12 @@ export class NavbarComponent {
   readonly menuAbierto = signal(false);
 
   readonly pestanas: NavItem[] = [
-    { id: 'patrimonio', ruta: '/patrimonio', etiqueta: 'Patrimonio', tecla: '1' },
-    { id: 'mes', ruta: '/mes', etiqueta: 'Este mes', tecla: '2' },
-    { id: 'fondos', ruta: '/productos', etiqueta: 'Productos', tecla: '3' },
-    { id: 'rendimiento', ruta: '/rendimiento', etiqueta: 'Rendimiento', tecla: '4' },
-    { id: 'datos', ruta: '/datos', etiqueta: 'Mis datos', tecla: '5' },
-    { id: 'ayuda', ruta: '/ayuda', etiqueta: 'Ayuda', tecla: '6' },
+    { id: 'patrimonio', ruta: '/patrimonio', etiqueta: 'Patrimonio' },
+    { id: 'mes', ruta: '/mes', etiqueta: 'Este mes' },
+    { id: 'fondos', ruta: '/productos', etiqueta: 'Productos' },
+    { id: 'rendimiento', ruta: '/rendimiento', etiqueta: 'Rendimiento' },
+    { id: 'datos', ruta: '/datos', etiqueta: 'Mis datos' },
+    { id: 'ayuda', ruta: '/ayuda', etiqueta: 'Ayuda' },
   ];
 
   alternarMenu(): void {

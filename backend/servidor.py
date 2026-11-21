@@ -368,6 +368,56 @@ def api_buscar():
     return jsonify(resultados=res, sinConexion=(not res and bool(buscar.hubo_fallos_desde(n))))
 
 
+@app.get("/api/bancos")
+def api_bancos():
+    q = (request.args.get("q") or "").strip()
+    uid = uid_actual()
+    if db.activo():
+        datos_db = db.listar_entidades(uid=uid, q=q)
+        recientes = datos_db["recientes"]
+        entidades = datos_db["entidades"]
+    else:
+        recientes = []
+        entidades = []
+
+    online = []
+    if len(q) >= 2:
+        vistos_dom = {e["dominio"].lower() for e in entidades if e.get("dominio")}
+        vistos_nom = {e["nombre"].lower() for e in entidades if e.get("nombre")}
+        for b in buscar.buscar_bancos(q):
+            dom = (b.get("dominio") or "").lower()
+            nom = (b.get("nombre") or "").lower()
+            if (dom and dom in vistos_dom) or (nom and nom in vistos_nom):
+                continue
+            online.append({
+                "nombre": b.get("nombre", ""),
+                "dominio": b.get("dominio", ""),
+                "logo": b.get("logo", ""),
+                "categoria": b.get("dominio", ""),
+                "verificado": bool(b.get("verificado")),
+            })
+    return jsonify(recientes=recientes, entidades=entidades, online=online)
+
+
+@app.post("/api/bancos/uso")
+def api_bancos_uso():
+    datos = request.get_json(silent=True) or {}
+    nombre = (datos.get("nombre") or "").strip()
+    if not nombre:
+        return jsonify(ok=False, error="El nombre de la entidad es obligatorio."), 400
+    if not db.activo():
+        return jsonify(ok=True, entidad={"nombre": nombre})
+    ent = db.registrar_entidad(
+        nombre=nombre,
+        dominio=datos.get("dominio") or "",
+        logo=datos.get("logo") or "",
+        categoria=datos.get("categoria") or "",
+        uid=uid_actual(),
+        origen="brandfetch" if datos.get("dominio") else "usuario",
+    )
+    return jsonify(ok=True, entidad=ent)
+
+
 GUARDAR = {
     "productos": almacen.guarda_producto,
     "movimientos": almacen.guarda_movimiento,

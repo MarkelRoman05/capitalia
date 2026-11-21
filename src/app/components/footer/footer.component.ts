@@ -27,16 +27,10 @@ import { LogoComponent } from '../logo/logo.component';
       </div>
 
       <div class="footer-right">
-        <div class="footer-shortcuts hide-sm" aria-label="Atajos de teclado rápidos">
-          <span><kbd>1</kbd>–<kbd>6</kbd> Rutas</span>
-          <span><kbd>V</kbd> Presentación</span>
-          <span><kbd>L</kbd> Tema</span>
-          <span><kbd>Esc</kbd> Restablecer</span>
-        </div>
         <div class="footer-links">
           <a routerLink="/patrimonio">Patrimonio</a>
           <a routerLink="/rendimiento">Rendimiento</a>
-          <a routerLink="/datos" class="solo-edicion">Mis datos</a>
+          <a routerLink="/datos">Mis datos</a>
           <a routerLink="/ayuda">Ayuda</a>
         </div>
       </div>
