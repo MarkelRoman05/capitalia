@@ -12,6 +12,7 @@ import html as html_lib
 import json
 import logging
 import os
+import re
 import secrets
 import sys
 import threading
@@ -24,7 +25,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory, sessio
 from werkzeug.middleware.proxy_fix import ProxyFix
 from werkzeug.serving import make_server
 
-from . import almacen, buscar, db, exportar, importar, motor, plantilla
+from . import almacen, buscar, carteras_catalogo, db, exportar, importar, motor, plantilla
 
 RAIZ = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DIST_ANGULAR = os.path.join(RAIZ, "dist", "capitalia", "browser")
@@ -543,8 +544,23 @@ def api_cartera():
 @app.get("/api/buscar")
 def api_buscar():
     n = len(buscar.FALLOS)
-    res = buscar.buscar(request.args.get("q", ""))
+    q = (request.args.get("q") or "").strip()[:120]
+    tipo = (request.args.get("tipo") or "todos").strip().lower()
+    if tipo not in buscar.TIPOS_BUSQUEDA_VALIDOS:
+        tipo = "todos"
+    res = buscar.buscar(q, tipo=tipo)
     return jsonify(resultados=res, sinConexion=(not res and bool(buscar.hubo_fallos_desde(n))))
+
+
+@app.get("/api/cartera-modelo/<cartera_id>")
+def api_cartera_modelo(cartera_id):
+    cid = (cartera_id or "").strip().lower()
+    if not re.fullmatch(r"[a-z0-9_-]{2,80}", cid):
+        return jsonify(ok=False, error="Identificador de cartera inválido."), 400
+    detalle = carteras_catalogo.obtener_cartera_enriquecida(cid)
+    if not detalle:
+        return jsonify(ok=False, error="Cartera no encontrada."), 404
+    return jsonify(ok=True, cartera=detalle)
 
 
 @app.get("/api/bancos")
@@ -635,6 +651,226 @@ def cambia(fn, motivo_copia="Automática", prefijo_copia="auto"):
         panel=datos,
         avisos=(datos or {}).get("avisos", []),
     )
+
+
+@app.post("/api/productos/lote")
+def api_guardar_productos_lote():
+    payload = request.get_json(silent=True) or {}
+    productos = payload.get("productos")
+    entidad_def = (payload.get("entidad") or "").strip()[:80]
+    grupo_id = (payload.get("grupoId") or "").strip().lower()
+    grupo_nombre = (payload.get("grupoNombre") or "").strip()[:120]
+    if grupo_id and not re.fullmatch(r"[a-z0-9_-]{2,80}", grupo_id):
+        return jsonify(ok=False, error="Identificador de grupo inválido."), 400
+    if not isinstance(productos, list) or not (1 <= len(productos) <= 20):
+        return jsonify(ok=False, error="Envía entre 1 y 20 productos válidos."), 400
+
+    def fn(cfg):
+        existentes_por_clave = {}
+        for p in cfg.get("productos") or []:
+            for k in ("identificador", "codigo"):
+                val = (p.get(k) or "").strip().upper()
+                if val:
+                    existentes_por_clave[val] = p
+
+        usados = {p.get("slot") for p in cfg.get("productos") or [] if p.get("slot")}
+        libres = [s for s in range(1, 13) if s not in usados] or list(range(1, 13))
+        idx_slot = 0
+        añadidos = 0
+        vinculados = 0
+        omitidos = 0
+
+        for bruto in productos:
+            if not isinstance(bruto, dict):
+                continue
+            ident = (bruto.get("identificador") or "").strip().upper()
+            cod = (bruto.get("codigo") or "").strip()
+            fuente = (bruto.get("fuente") or "").strip().lower()
+            if not cod or fuente not in ("morningstar", "yahoo", "coingecko"):
+                omitidos += 1
+                continue
+
+            item = dict(bruto)
+            g_id_item = (item.get("grupoId") or grupo_id or "").strip().lower()
+            g_nom_item = (item.get("grupoNombre") or grupo_nombre or "").strip()[:120]
+            if g_id_item and not re.fullmatch(r"[a-z0-9_-]{2,80}", g_id_item):
+                raise almacen.ErrorValidacion(["El identificador del grupo no es válido."])
+
+            peso_raw = item.get("pesoObjetivo")
+            peso_val = None
+            if peso_raw is not None and peso_raw != "":
+                errs_peso = []
+                peso_val = almacen.numero(peso_raw, "el peso objetivo", errs_peso, obligatorio=False, minimo=0)
+                if errs_peso or (peso_val is not None and peso_val > 100):
+                    raise almacen.ErrorValidacion(["El peso objetivo debe estar entre 0 y 100."])
+                peso_val = round(peso_val, 2) if peso_val is not None else None
+
+            existente = (
+                existentes_por_clave.get(ident) if ident else None
+            ) or existentes_por_clave.get(cod.upper())
+
+            if existente:
+                if g_id_item and (not existente.get("grupoId") or existente.get("grupoId") == g_id_item):
+                    existente["grupoId"] = g_id_item
+                    if g_nom_item:
+                        existente["grupoNombre"] = g_nom_item
+                    if peso_val is not None:
+                        existente["pesoObjetivo"] = peso_val
+                    vinculados += 1
+                else:
+                    omitidos += 1
+                continue
+
+            if entidad_def and not (item.get("entidad") or "").strip():
+                item["entidad"] = entidad_def
+            if g_id_item:
+                item["grupoId"] = g_id_item
+            if g_nom_item:
+                item["grupoNombre"] = g_nom_item
+            if peso_val is not None:
+                item["pesoObjetivo"] = peso_val
+            if not item.get("slot"):
+                item["slot"] = libres[idx_slot % len(libres)]
+                idx_slot += 1
+
+            prod, _ = almacen.guarda_producto(cfg, item)
+            for k in ("identificador", "codigo"):
+                val = (prod.get(k) or "").strip().upper()
+                if val:
+                    existentes_por_clave[val] = prod
+            añadidos += 1
+
+        if añadidos == 0 and vinculados == 0 and omitidos == 0:
+            raise almacen.ErrorValidacion(["No se pudo validar ningún producto de la cartera."])
+        return {
+            "añadidos": añadidos,
+            "omitidos": omitidos,
+            "vinculados": vinculados,
+            "grupoId": grupo_id or None,
+            "grupoNombre": grupo_nombre or None,
+        }
+
+    return cambia(fn, motivo_copia="Alta de cartera indexada")
+
+
+@app.post("/api/movimientos/lote-cartera")
+def api_guardar_movimientos_lote_cartera():
+    payload = request.get_json(silent=True) or {}
+    lineas = payload.get("lineas")
+    reemplazar = bool(payload.get("reemplazarPrevios"))
+    nota = almacen.texto(payload.get("nota"), 200) or "Cartera agrupada"
+    if not isinstance(lineas, list) or not (1 <= len(lineas) <= 30):
+        return jsonify(ok=False, error="Envía entre 1 y 30 líneas de posición."), 400
+
+    errs_fecha = []
+    f_iso = almacen.fecha(payload.get("fecha"), errs_fecha)
+    if errs_fecha:
+        return jsonify(ok=False, error=errs_fecha[0], errores=errs_fecha), 400
+
+    def fn(cfg):
+        errs = []
+        validas = []
+        for idx, raw in enumerate(lineas, start=1):
+            if not isinstance(raw, dict):
+                continue
+            pid = (raw.get("producto") or "").strip()
+            imp = almacen.numero(raw.get("importe"), f"el importe de la línea {idx}", errs, obligatorio=False, minimo=0)
+            uni = almacen.numero(raw.get("unidades"), f"las participaciones de la línea {idx}", errs, obligatorio=False, minimo=0)
+            if errs:
+                raise almacen.ErrorValidacion(errs)
+            if not (imp and imp > 0) and not (uni and uni > 0):
+                continue
+            p = almacen.producto(cfg, pid)
+            if not p:
+                raise almacen.ErrorValidacion([f"Producto desconocido: {pid}"])
+            if p.get("tipo") in almacen.SOLO_SALDO:
+                raise almacen.ErrorValidacion([f"«{p.get('corto') or p['nombre']}» se valora con saldos manuales."])
+            validas.append((p, imp, uni))
+
+        if not validas:
+            raise almacen.ErrorValidacion(["Introduce al menos un importe o número de participaciones mayor que 0."])
+
+        carpeta = dir_trabajo_motor()
+        preparadas = []
+        for p, imp, uni in validas:
+            imp_val = round(float(imp), 2) if (imp and imp > 0) else None
+            uni_val = round(float(uni), 6) if (uni and uni > 0) else None
+            cotiza = p.get("fuente") != "manual" and p.get("codigo")
+            if cotiza and (imp_val is None or uni_val is None):
+                serie = motor.serie_producto(p, carpeta)
+                px = motor.valor_en(serie, f_iso, margen=10) if serie else None
+                if not px:
+                    info = buscar.probar(p["fuente"], p["codigo"])
+                    if info and info.get("precio"):
+                        px_raw = float(info["precio"])
+                        if p["fuente"] == "yahoo":
+                            mon = info.get("moneda") or p.get("moneda") or "EUR"
+                            sim, factor = motor.simbolo_fx(mon)
+                            if sim:
+                                fx_serie = motor.serie_cambio(mon, carpeta)
+                                fx_val = motor.valor_en(fx_serie, f_iso, margen=10)
+                                px = px_raw * factor * fx_val if fx_val else None
+                            else:
+                                px = px_raw * factor
+                        else:
+                            px = px_raw
+                if not px or px <= 0:
+                    raise almacen.ErrorValidacion([
+                        f"No se pudo obtener el precio de «{p.get('corto') or p['nombre']}» para el {almacen.fmt_fecha(f_iso)}. "
+                        "Indica también las participaciones manualmente."
+                    ])
+                if uni_val is None:
+                    uni_val = round(imp_val / px, 6)
+                elif imp_val is None:
+                    imp_val = round(uni_val * px, 2)
+            elif not cotiza and imp_val is None:
+                raise almacen.ErrorValidacion([
+                    f"Indica el importe en euros para «{p.get('corto') or p['nombre']}»."
+                ])
+            preparadas.append((p["id"], uni_val or 0.0, imp_val))
+
+        reemplazados = 0
+        if reemplazar:
+            pids_tocados = {pid for pid, _, _ in preparadas}
+            antes = len(cfg.get("movimientos") or [])
+            cfg["movimientos"] = [
+                m for m in (cfg.get("movimientos") or [])
+                if m.get("producto") not in pids_tocados
+            ]
+            reemplazados = antes - len(cfg["movimientos"])
+
+        guardados = 0
+        for pid, uni_val, imp_val in preparadas:
+            almacen.guarda_movimiento(cfg, {
+                "producto": pid,
+                "fecha": f_iso,
+                "tipo": "compra",
+                "unidades": uni_val,
+                "importe": imp_val,
+                "nota": nota,
+            })
+            guardados += 1
+
+        return {"guardados": guardados, "reemplazados": reemplazados}
+
+    return cambia(fn, motivo_copia="Importes de cartera agrupada")
+
+
+@app.delete("/api/carteras-grupo/<grupo_id>")
+def api_borrar_cartera_grupo(grupo_id):
+    gid = (grupo_id or "").strip().lower()
+    if not re.fullmatch(r"[a-z0-9_-]{2,80}", gid):
+        return jsonify(ok=False, error="Identificador de cartera inválido."), 400
+
+    def fn(cfg):
+        pids = [p["id"] for p in (cfg.get("productos") or []) if (p.get("grupoId") or "").lower() == gid]
+        if not pids:
+            raise almacen.ErrorValidacion(["No se encontró ninguna cartera con ese identificador."])
+        for pid in pids:
+            almacen.borra_producto(cfg, pid)
+        return {"eliminados": len(pids), "grupoId": gid}
+
+    return cambia(fn, motivo_copia="Eliminación de cartera agrupada")
 
 
 @app.post("/api/<coleccion>")

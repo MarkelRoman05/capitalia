@@ -1,4 +1,5 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
@@ -6,6 +7,7 @@ import { ProductoModalComponent } from '../modals/producto-modal/producto-modal.
 import { MovimientoModalComponent } from '../modals/movimiento-modal/movimiento-modal.component';
 import { ValoracionModalComponent } from '../modals/valoracion-modal/valoracion-modal.component';
 import { LoteSaldosModalComponent } from '../modals/lote-saldos-modal/lote-saldos-modal.component';
+import { CarteraPosicionesModalComponent } from '../modals/cartera-posiciones-modal/cartera-posiciones-modal.component';
 import { IconComponent } from '../icon/icon.component';
 import {
   InformeImportacion,
@@ -20,14 +22,37 @@ interface ArchivoLeido {
   base64: string;
 }
 
+interface GrupoProductosDatos {
+  tipo: 'grupo';
+  grupoId: string;
+  grupoNombre: string;
+  entidad: string;
+  productos: ProductoCfg[];
+  valorTotal: number;
+  aportadoTotal: number;
+  plusvaliaTotal: number | null;
+  rentabilidadTotal: number | null;
+  numMovsTotal: number;
+  color: string;
+}
+
+interface ItemProductoSueltoDatos {
+  tipo: 'producto';
+  producto: ProductoCfg;
+}
+
+type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
+
 @Component({
   selector: 'cap-datos-tab',
   imports: [
+    NgTemplateOutlet,
     FormsModule,
     ProductoModalComponent,
     MovimientoModalComponent,
     ValoracionModalComponent,
     LoteSaldosModalComponent,
+    CarteraPosicionesModalComponent,
     IconComponent,
   ],
   template: `
@@ -318,23 +343,37 @@ interface ArchivoLeido {
           }
 
           <div class="datos-prod-list">
-            @for (p of productosFiltrados(); track p.id) {
+            <ng-template #filaProdTpl let-p let-grupoTotal="grupoTotal" let-enGrupo="enGrupo">
               @let calc = infoCalculadaProducto(p.id);
               @let logo = logoEntidad(p.entidad);
-              <article class="datos-prod-row" [style.--prod-color]="colorProducto(p.id)">
+              <article
+                class="datos-prod-row"
+                [class.datos-group-child]="enGrupo"
+                [style.--prod-color]="colorProducto(p.id)"
+              >
                 <div class="datos-prod-main">
                   <div class="datos-prod-title-line">
                     <strong class="datos-prod-name">{{ p.nombre }}</strong>
                     <span [class]="'pm-type-badge pm-type-' + (p.tipo || 'otro')">
                       {{ etiquetaTipo(p.tipo) }}
                     </span>
+                    @if (p.pesoObjetivo !== null && p.pesoObjetivo !== undefined) {
+                      <span class="tag pm-tag-isin mono">
+                        Obj. {{ fmt.num(p.pesoObjetivo, 1) }}%
+                      </span>
+                    }
+                    @if (enGrupo && grupoTotal > 0) {
+                      <span class="tag pos mono">
+                        Real {{ fmt.pct(valorActualProducto(p.id) / grupoTotal, 1) }}
+                      </span>
+                    }
                     @if (p.largoPlazo) {
                       <span class="tag tag-lp">LP</span>
                     }
                   </div>
 
                   <div class="datos-prod-meta">
-                    @if (p.entidad) {
+                    @if (!enGrupo && p.entidad) {
                       <span class="datos-prod-bank">
                         @if (logo) {
                           <img
@@ -467,6 +506,136 @@ interface ArchivoLeido {
                   </div>
                 </div>
               </article>
+            </ng-template>
+
+            @for (el of elementosProductos(); track el.tipo === 'grupo' ? 'grp-' + el.grupoId : el.producto.id) {
+              @if (el.tipo === 'grupo') {
+                <article class="datos-group-card" [style.--prod-color]="el.color">
+                  <div class="datos-group-head">
+                    <button
+                      type="button"
+                      class="datos-group-toggle"
+                      [attr.aria-expanded]="esGrupoExpandido(el.grupoId)"
+                      (click)="alternarGrupoDatos(el.grupoId)"
+                    >
+                      <cap-icon
+                        [name]="esGrupoExpandido(el.grupoId) ? 'chevron-down' : 'chevron-right'"
+                        [size]="16"
+                      />
+                      <div class="datos-prod-main">
+                        <div class="datos-prod-title-line">
+                          <strong class="datos-prod-name">{{ el.grupoNombre }}</strong>
+                          <span class="pm-type-badge pm-type-cartera">
+                            Cartera · {{ el.productos.length }} productos
+                          </span>
+                        </div>
+                        <div class="datos-prod-meta">
+                          @if (el.entidad) {
+                            @let logoGrp = logoEntidad(el.entidad);
+                            <span class="datos-prod-bank">
+                              @if (logoGrp) {
+                                <img
+                                  [src]="logoGrp"
+                                  [alt]="el.entidad"
+                                  loading="lazy"
+                                  (error)="marcarLogoFallido(logoGrp)"
+                                />
+                              }
+                              <span>{{ el.entidad }}</span>
+                            </span>
+                          }
+                          <span class="tag">{{ el.numMovsTotal }} operac.</span>
+                        </div>
+                      </div>
+                    </button>
+
+                    <div class="datos-prod-metrics">
+                      <div class="datos-prod-val-block">
+                        <strong class="datos-prod-val mono valor-privado">
+                          {{ fmt.eur(el.valorTotal, 2) }}
+                        </strong>
+                        @if (el.plusvaliaTotal !== null && el.aportadoTotal > 0) {
+                          <span
+                            class="datos-prod-pnl mono valor-privado"
+                            [class.pos]="el.plusvaliaTotal >= 0"
+                            [class.neg]="el.plusvaliaTotal < 0"
+                          >
+                            {{ fmt.eurSigno(el.plusvaliaTotal, 0) }}
+                            @if (el.rentabilidadTotal !== null) {
+                              ({{ fmt.pctSigno(el.rentabilidadTotal, 1) }})
+                            }
+                          </span>
+                        } @else {
+                          <span class="datos-prod-subcount">
+                            {{ el.valorTotal > 0 ? 'Con posiciones' : 'Sin importes aún' }}
+                          </span>
+                        }
+                      </div>
+
+                      <div class="datos-prod-actions">
+                        <button
+                          type="button"
+                          class="btn-tabla btn-tabla-primario"
+                          (click)="abrirModalPosicionesGrupo(el.grupoId, el.grupoNombre)"
+                          title="Indicar exactamente cuánto tienes en cada producto"
+                        >
+                          <cap-icon name="plus" [size]="13" />
+                          <span>Poner importes</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-tabla"
+                          (click)="irAImportarGrupo(el)"
+                          title="Importar extractos CSV/Excel de MyInvestor"
+                        >
+                          <span>Importar MyInvestor</span>
+                        </button>
+                        <button
+                          type="button"
+                          class="btn-tabla btn-tabla-peligro"
+                          (click)="confirmarBorrarGrupo(el)"
+                          title="Eliminar cartera completa"
+                          aria-label="Eliminar cartera completa"
+                        >
+                          <svg
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            aria-hidden="true"
+                          >
+                            <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  @if (esGrupoExpandido(el.grupoId)) {
+                    <div class="datos-group-body">
+                      @for (p of el.productos; track p.id) {
+                        <ng-container
+                          [ngTemplateOutlet]="filaProdTpl"
+                          [ngTemplateOutletContext]="{
+                            $implicit: p,
+                            grupoTotal: el.valorTotal,
+                            enGrupo: true,
+                          }"
+                        />
+                      }
+                    </div>
+                  }
+                </article>
+              } @else {
+                <ng-container
+                  [ngTemplateOutlet]="filaProdTpl"
+                  [ngTemplateOutletContext]="{
+                    $implicit: el.producto,
+                    grupoTotal: 0,
+                    enGrupo: false,
+                  }"
+                />
+              }
             } @empty {
               <div class="datos-empty-box">
                 @if (!c.productos.length) {
@@ -885,10 +1054,30 @@ interface ArchivoLeido {
 
           @if (modoImportar() === 'myinvestor') {
             <div class="import-box">
+              @if (importarGrupoActivo(); as grp) {
+                <div class="datos-import-banner">
+                  <div>
+                    <strong>Importando para «{{ grp.nombre }}»</strong>
+                    <div class="muted" style="margin-top: 0.2rem">
+                      Sube los extractos «Plusvalías y minusvalías» de MyInvestor; estos
+                      {{ grp.isins.length }} ISINs ya están agrupados en tu cartera y recibirán sus
+                      operaciones automáticamente:
+                      <span class="mono">{{ grp.isins.join(', ') }}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    class="btn-link"
+                    (click)="importarGrupoActivo.set(null)"
+                  >
+                    Cerrar aviso
+                  </button>
+                </div>
+              }
               <p>
                 Descarga el extracto «Plusvalías y minusvalías» de cada fondo en CSV o Excel y
                 selecciónalos aquí. Si el nombre del archivo incluye el código ISIN, Capitalia
-                creará y vinculará cada fondo automáticamente.
+                vinculará las operaciones automáticamente al producto correspondiente de tu cartera.
               </p>
               <div class="form-grid-2" style="margin-top: 1rem">
                 <div class="campo">
@@ -1193,6 +1382,14 @@ interface ArchivoLeido {
         [productoEditar]="prodEditando()"
         (cerrar)="modalProductoAbierto.set(false)"
         (creadoYAbrir)="onProductoCreadoYAbrir($event)"
+        (carteraCreada)="onCarteraCreada($event)"
+      />
+      <cap-cartera-posiciones-modal
+        [abierto]="modalPosicionesAbierto()"
+        [grupoId]="modalPosicionesGrupo()?.id ?? null"
+        [grupoNombre]="modalPosicionesGrupo()?.nombre ?? ''"
+        (cerrar)="modalPosicionesAbierto.set(false)"
+        (irAImportar)="onIrAImportarDesdePosiciones($event)"
       />
       <cap-movimiento-modal
         [abierto]="modalMovimientoAbierto()"
@@ -1230,6 +1427,12 @@ export class DatosTabComponent {
   // Product modal state
   readonly modalProductoAbierto = signal<boolean>(false);
   readonly prodEditando = signal<ProductoCfg | null>(null);
+  readonly gruposExpandidos = signal<Set<string>>(new Set());
+
+  // Group portfolio positions modal & contextual MyInvestor import banner
+  readonly modalPosicionesAbierto = signal<boolean>(false);
+  readonly modalPosicionesGrupo = signal<{ id: string; nombre: string } | null>(null);
+  readonly importarGrupoActivo = signal<{ id: string; nombre: string; isins: string[] } | null>(null);
 
   // Movement modal state
   readonly modalMovimientoAbierto = signal<boolean>(false);
@@ -1299,12 +1502,78 @@ export class DatosTabComponent {
         p.entidad,
         p.clase,
         p.gestora,
+        p.grupoNombre,
         this.etiquetaTipo(p.tipo),
       ]
         .filter(Boolean)
         .join(' ')
         .toLowerCase();
       return texto.includes(q);
+    });
+  });
+
+  readonly elementosProductos = computed<ElementoListaDatos[]>(() => {
+    const filtrados = this.productosFiltrados();
+    const grupos = new Map<string, ProductoCfg[]>();
+    const orden: ({ tipo: 'grupo'; gid: string } | { tipo: 'producto'; p: ProductoCfg })[] = [];
+
+    for (const p of filtrados) {
+      const gid = (p.grupoId || '').trim().toLowerCase();
+      if (!gid) {
+        orden.push({ tipo: 'producto', p });
+        continue;
+      }
+      if (!grupos.has(gid)) {
+        grupos.set(gid, []);
+        orden.push({ tipo: 'grupo', gid });
+      }
+      grupos.get(gid)!.push(p);
+    }
+
+    return orden.map((entry) => {
+      if (entry.tipo === 'producto') {
+        return { tipo: 'producto', producto: entry.p };
+      }
+      const miembros = grupos
+        .get(entry.gid)!
+        .slice()
+        .sort((a, b) => (b.pesoObjetivo ?? -1) - (a.pesoObjetivo ?? -1));
+      const primero = miembros[0];
+      let valorTotal = 0;
+      let aportadoTotal = 0;
+      let plusvaliaSum = 0;
+      let hayPlusvalia = false;
+      let numMovsTotal = 0;
+
+      for (const m of miembros) {
+        const calc = this.infoCalculadaProducto(m.id);
+        valorTotal += calc ? this.store.valorProductoConVivo(calc) : 0;
+        if (calc?.aportado !== null && calc?.aportado !== undefined) {
+          aportadoTotal += calc.aportado;
+        }
+        if (calc?.plusvalia !== null && calc?.plusvalia !== undefined) {
+          plusvaliaSum += calc.plusvalia + this.store.ajusteVivoProducto(calc);
+          hayPlusvalia = true;
+        }
+        numMovsTotal += this.numMovimientos(m.id);
+      }
+
+      const rentabilidadTotal =
+        hayPlusvalia && aportadoTotal > 0 ? plusvaliaSum / aportadoTotal : null;
+
+      return {
+        tipo: 'grupo',
+        grupoId: entry.gid,
+        grupoNombre: primero.grupoNombre || entry.gid,
+        entidad: primero.entidad || '',
+        productos: miembros,
+        valorTotal,
+        aportadoTotal,
+        plusvaliaTotal: hayPlusvalia ? plusvaliaSum : null,
+        rentabilidadTotal,
+        numMovsTotal,
+        color: this.colorProducto(primero.id),
+      };
     });
   });
 
@@ -1366,7 +1635,7 @@ export class DatosTabComponent {
   }
 
   esTipoInversion(tipo: string): boolean {
-    return ['fondo', 'etf', 'accion', 'cripto', 'commodity'].includes(tipo);
+    return ['fondo', 'etf', 'accion', 'cripto', 'commodity', 'pension'].includes(tipo);
   }
 
   esProductoCotizado(p: ProductoCfg): boolean {
@@ -1436,6 +1705,67 @@ export class DatosTabComponent {
     } else {
       this.abrirModalValoracion(undefined, ev.id);
     }
+  }
+
+  onCarteraCreada(ev: { grupoId: string; grupoNombre: string }): void {
+    this.gruposExpandidos.update((prev) => {
+      const next = new Set(prev);
+      next.add(ev.grupoId);
+      return next;
+    });
+    this.abrirModalPosicionesGrupo(ev.grupoId, ev.grupoNombre);
+  }
+
+  esGrupoExpandido(grupoId: string): boolean {
+    return this.gruposExpandidos().has(grupoId);
+  }
+
+  alternarGrupoDatos(grupoId: string): void {
+    this.gruposExpandidos.update((prev) => {
+      const next = new Set(prev);
+      if (next.has(grupoId)) next.delete(grupoId);
+      else next.add(grupoId);
+      return next;
+    });
+  }
+
+  abrirModalPosicionesGrupo(id: string, nombre: string): void {
+    this.modalPosicionesGrupo.set({ id, nombre });
+    this.modalPosicionesAbierto.set(true);
+  }
+
+  onIrAImportarDesdePosiciones(grupoId: string): void {
+    const prods = (this.store.cartera()?.productos || []).filter(
+      (p) => (p.grupoId || '').trim().toLowerCase() === grupoId.trim().toLowerCase(),
+    );
+    const nombre = prods[0]?.grupoNombre || grupoId;
+    const isins = prods
+      .map((p) => (p.identificador || p.codigo || '').trim().toUpperCase())
+      .filter(Boolean);
+    this.importarGrupoActivo.set({ id: grupoId, nombre, isins });
+    this.cambiarModoImportar('myinvestor');
+    this.store.subTabDatos.set('importar');
+  }
+
+  irAImportarGrupo(grp: GrupoProductosDatos): void {
+    const isins = grp.productos
+      .map((p) => (p.identificador || p.codigo || '').trim().toUpperCase())
+      .filter(Boolean);
+    this.importarGrupoActivo.set({ id: grp.grupoId, nombre: grp.grupoNombre, isins });
+    this.cambiarModoImportar('myinvestor');
+    this.store.subTabDatos.set('importar');
+  }
+
+  confirmarBorrarGrupo(grp: GrupoProductosDatos): void {
+    this.store.pedirConfirmacion({
+      titulo: 'Eliminar cartera agrupada',
+      mensaje: `¿Seguro que quieres eliminar «${grp.grupoNombre}» junto con sus ${grp.productos.length} productos y todas sus operaciones? Se guardará una copia automática antes de borrar.`,
+      textoConfirmar: 'Sí, eliminar cartera',
+      peligro: true,
+      accion: async () => {
+        await this.store.borrarGrupoProductos(grp.grupoId, grp.grupoNombre);
+      },
+    });
   }
 
   // Product modal logic

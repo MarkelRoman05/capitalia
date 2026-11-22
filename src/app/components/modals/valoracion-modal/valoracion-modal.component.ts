@@ -158,7 +158,7 @@ export class ValoracionModalComponent {
             this.productoPreseleccionado() ||
             prods.find(
               (p) =>
-                !['fondo', 'etf', 'accion', 'cripto', 'commodity'].includes(p.tipo) ||
+                !['fondo', 'etf', 'accion', 'cripto', 'commodity', 'pension'].includes(p.tipo) ||
                 p.fuente === 'manual',
             )?.id ||
             prods[0]?.id ||

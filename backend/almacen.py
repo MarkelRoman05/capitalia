@@ -130,13 +130,17 @@ def texto(v, maximo=200):
 # ---------------------------------------------------------------- productos
 
 CAMPOS_TEXTO = ("nombre", "corto", "identificador", "codigo", "entidad", "clase", "gestora",
-                "tipoDetalle", "respaldo", "respaldoMoneda", "vivo", "papel")
+                "tipoDetalle", "respaldo", "respaldoMoneda", "vivo", "papel", "grupoId", "grupoNombre")
 
 
 def guarda_producto(cfg, datos):
     """Crea o actualiza un producto. Devuelve (producto, cambió_la_fuente)."""
     errores = []
-    nuevo = {k: texto(datos.get(k), 400 if k == "papel" else 200) for k in CAMPOS_TEXTO}
+    nuevo = {k: texto(datos.get(k), 400 if k == "papel" else (120 if k == "grupoNombre" else 200)) for k in CAMPOS_TEXTO}
+    if nuevo.get("grupoId"):
+        nuevo["grupoId"] = nuevo["grupoId"].strip().lower()
+        if not re.fullmatch(r"[a-z0-9_-]{2,80}", nuevo["grupoId"]):
+            errores.append("El identificador del grupo no es válido.")
     if not nuevo["nombre"]:
         errores.append("Ponle un nombre al producto.")
     tipo = datos.get("tipo")
@@ -156,6 +160,9 @@ def guarda_producto(cfg, datos):
     riesgo = numero(datos.get("riesgo"), "el nivel de riesgo", errores, obligatorio=False, minimo=1)
     if riesgo is not None and riesgo > 7:
         errores.append("El nivel de riesgo va de 1 a 7.")
+    peso_obj = numero(datos.get("pesoObjetivo"), "el peso objetivo", errores, obligatorio=False, minimo=0)
+    if peso_obj is not None and peso_obj > 100:
+        errores.append("El peso objetivo debe estar entre 0 y 100.")
     if errores:
         raise ErrorValidacion(errores)
 
@@ -163,7 +170,8 @@ def guarda_producto(cfg, datos):
                  largoPlazo=bool(datos.get("largoPlazo", True)),
                  slot=int(datos["slot"]) if str(datos.get("slot") or "").isdigit() else None,
                  ter=ter / 100 if ter is not None else None,
-                 riesgo=int(riesgo) if riesgo is not None else None)
+                 riesgo=int(riesgo) if riesgo is not None else None,
+                 pesoObjetivo=round(peso_obj, 2) if peso_obj is not None else None)
     if fuente == "manual":
         nuevo.update(codigo="", respaldo="", respaldoMoneda="")
     nuevo["corto"] = nuevo["corto"] or nuevo["nombre"][:24]

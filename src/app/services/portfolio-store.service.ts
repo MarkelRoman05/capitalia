@@ -8,12 +8,14 @@ import {
   DatosPanel,
   EntidadBanco,
   InformeImportacion,
+  LineaLoteCartera,
   MetricasCalculadas,
   MovimientoCfg,
   ProductoCalculado,
   ProductoCfg,
   RespuestaAuthYo,
   RespuestaBancos,
+  RespuestaLoteProductos,
   ResultadoBusqueda,
   Usuario,
   ValoracionCfg,
@@ -72,6 +74,7 @@ export class PortfolioStoreService {
   readonly agrupacionDist = signal<AgrupacionDistId>('clase');
   readonly ocultos = signal<Set<string>>(new Set<string>());
   readonly productoSeleccionadoId = signal<string | null>(null);
+  readonly grupoSeleccionadoId = signal<string | null>(null);
   readonly mesSeleccionadoIdx = signal<number>(-1);
   readonly compRef = signal<string>('msci_world');
   readonly btcVivo = signal<number | null>(null);
@@ -479,6 +482,41 @@ export class PortfolioStoreService {
     this.ocultos.set(actual);
   }
 
+  toggleGrupoComponentes(ids: string[], solo = false): void {
+    const grupoIds = new Set(ids);
+    if (!grupoIds.size) return;
+    const todos = this.todosComponentes();
+    const actual = new Set(this.ocultos());
+
+    if (solo) {
+      const otrosOcultos = todos
+        .filter((c) => !grupoIds.has(c.id))
+        .every((c) => actual.has(c.id));
+      const todosGrupoVisibles = ids.every((id) => !actual.has(id));
+      if (otrosOcultos && todosGrupoVisibles) {
+        this.ocultos.set(new Set());
+      } else {
+        const nuevo = new Set<string>();
+        todos.forEach((c) => {
+          if (!grupoIds.has(c.id)) nuevo.add(c.id);
+        });
+        this.ocultos.set(nuevo);
+      }
+      return;
+    }
+
+    const todosOcultos = ids.every((id) => actual.has(id));
+    if (todosOcultos) {
+      ids.forEach((id) => actual.delete(id));
+    } else {
+      ids.forEach((id) => actual.add(id));
+      if (actual.size === todos.length) {
+        actual.clear();
+      }
+    }
+    this.ocultos.set(actual);
+  }
+
   mostrarTodos(): void {
     this.ocultos.set(new Set());
   }
@@ -511,7 +549,15 @@ export class PortfolioStoreService {
   }
 
   irAProducto(id: string): void {
+    this.grupoSeleccionadoId.set(null);
     this.productoSeleccionadoId.set(id);
+    this.tabActiva.set('fondos');
+    void this.router.navigate(['/productos']);
+  }
+
+  irAGrupo(grupoId: string): void {
+    this.grupoSeleccionadoId.set(grupoId);
+    this.productoSeleccionadoId.set(null);
     this.tabActiva.set('fondos');
     void this.router.navigate(['/productos']);
   }
@@ -1052,13 +1098,132 @@ export class PortfolioStoreService {
   }
 
   // CRUD Productos
-  async buscarProductos(q: string): Promise<ResultadoBusqueda[]> {
+  async buscarProductos(q: string, tipo = 'todos'): Promise<ResultadoBusqueda[]> {
+    const params: Record<string, string> = { q };
+    if (tipo && tipo !== 'todos') {
+      params['tipo'] = tipo;
+    }
     const resp = await firstValueFrom(
-      this.http.get<{ resultados: ResultadoBusqueda[] }>('/api/buscar', {
-        params: { q },
-      })
+      this.http.get<{ resultados: ResultadoBusqueda[] }>('/api/buscar', { params })
     );
     return resp.resultados || [];
+  }
+
+  async obtenerDetalleCarteraModelo(carteraId: string): Promise<ResultadoBusqueda | null> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.get<{ ok: boolean; cartera?: ResultadoBusqueda }>(
+          `/api/cartera-modelo/${encodeURIComponent(carteraId)}`
+        )
+      );
+      return resp.cartera ?? null;
+    } catch (err: unknown) {
+      this.notificarError(
+        this.extraerMensajeError(err, 'No se pudo cargar la composición de la cartera.')
+      );
+      return null;
+    }
+  }
+
+  async guardarProductosLote(
+    productos: Partial<ProductoCfg>[],
+    opciones?: string | { entidad?: string; grupoId?: string; grupoNombre?: string }
+  ): Promise<RespuestaLoteProductos | null> {
+    const opts = typeof opciones === 'string' ? { entidad: opciones } : opciones || {};
+    try {
+      const resp = await firstValueFrom(
+        this.http.post<{
+          ok: boolean;
+          item?: RespuestaLoteProductos;
+          panel: DatosPanel;
+        }>('/api/productos/lote', {
+          productos,
+          entidad: opts.entidad || '',
+          grupoId: opts.grupoId || '',
+          grupoNombre: opts.grupoNombre || '',
+        })
+      );
+      this.aplicarNuevoPanel(resp.panel ?? null);
+      await this.cargarCarteraConfig();
+      const info: RespuestaLoteProductos = resp.item ?? {
+        añadidos: productos.length,
+        omitidos: 0,
+      };
+      const nombreGrp = info.grupoNombre || opts.grupoNombre;
+      const totGrupo = info['añadidos'] + (info.vinculados || 0);
+      if (totGrupo > 0) {
+        const sufijo = info.omitidos ? ` (${info.omitidos} ya estaban en la cartera).` : '.';
+        this.notificarExito(
+          nombreGrp
+            ? `Cartera «${nombreGrp}» lista con ${totGrupo} productos${sufijo}`
+            : `Añadidos ${totGrupo} productos de la cartera${sufijo}`
+        );
+      } else {
+        this.notificarExito('Todos los productos de esta cartera ya estaban agrupados.');
+      }
+      return info;
+    } catch (err: unknown) {
+      this.notificarError(
+        this.extraerMensajeError(err, 'No se pudieron añadir los productos de la cartera.')
+      );
+      return null;
+    }
+  }
+
+  async guardarImportesCartera(payload: {
+    fecha: string;
+    nota?: string;
+    reemplazarPrevios?: boolean;
+    lineas: LineaLoteCartera[];
+  }): Promise<{ guardados: number; reemplazados: number } | null> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.post<{
+          ok: boolean;
+          item?: { guardados: number; reemplazados: number };
+          panel: DatosPanel;
+        }>('/api/movimientos/lote-cartera', payload)
+      );
+      this.aplicarNuevoPanel(resp.panel ?? null);
+      await this.cargarCarteraConfig();
+      const res = resp.item ?? { guardados: payload.lineas.length, reemplazados: 0 };
+      this.notificarExito(
+        `Guardados importes en ${res.guardados} productos.` +
+          (res.reemplazados ? ` (${res.reemplazados} operaciones previas sustituidas).` : '')
+      );
+      return res;
+    } catch (err: unknown) {
+      this.notificarError(
+        this.extraerMensajeError(err, 'No se pudieron guardar los importes de la cartera.')
+      );
+      return null;
+    }
+  }
+
+  async borrarGrupoProductos(grupoId: string, grupoNombre?: string): Promise<boolean> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.delete<{ ok: boolean; panel: DatosPanel }>(
+          `/api/carteras-grupo/${encodeURIComponent(grupoId)}`
+        )
+      );
+      this.aplicarNuevoPanel(resp.panel ?? null);
+      await this.cargarCarteraConfig();
+      if (this.grupoSeleccionadoId() === grupoId) {
+        this.grupoSeleccionadoId.set(null);
+      }
+      this.notificarExito(
+        grupoNombre
+          ? `Cartera «${grupoNombre}» y sus productos eliminados.`
+          : 'Cartera eliminada.'
+      );
+      return true;
+    } catch (err: unknown) {
+      this.notificarError(
+        this.extraerMensajeError(err, 'No se pudo eliminar la cartera.')
+      );
+      return false;
+    }
   }
 
   async cargarBancosIniciales(forzar = false): Promise<void> {

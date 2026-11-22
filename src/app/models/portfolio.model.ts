@@ -76,6 +76,9 @@ export interface ProductoCalculado {
   rentabilidad?: number | null;
   tir?: number | null;
   largoPlazo?: boolean;
+  grupoId?: string;
+  grupoNombre?: string;
+  pesoObjetivo?: number | null;
   slot?: number;
   slotColor?: [string, string];
   color?: [string, string];
@@ -267,10 +270,27 @@ export interface ProductoCfg {
   riesgo?: number | null;
   slot?: number;
   largoPlazo?: boolean;
+  grupoId?: string;
+  grupoNombre?: string;
+  pesoObjetivo?: number | null;
   respaldo?: string;
   respaldoMoneda?: string;
   vivo?: string;
   papel?: string;
+}
+
+export interface LineaLoteCartera {
+  producto: string;
+  importe?: number | null;
+  unidades?: number | null;
+}
+
+export interface RespuestaLoteProductos {
+  añadidos: number;
+  omitidos: number;
+  vinculados?: number;
+  grupoId?: string | null;
+  grupoNombre?: string | null;
 }
 
 export interface MovimientoCfg {
@@ -303,23 +323,72 @@ export interface CarteraConfig {
   objetivo?: ObjetivoPatrimonio;
 }
 
+export interface CotizacionAlternativa {
+  fuente: string;
+  codigo: string;
+  ticker?: string;
+  mercado?: string | null;
+  moneda: string;
+  precio: number;
+  fecha: string;
+  cambioDia?: number | null;
+  rentabilidad1a?: number | null;
+}
+
+export interface ComponenteCarteraModelo {
+  isin: string;
+  nombre: string;
+  categoria?: string | null;
+  gestora?: string | null;
+  moneda: string;
+  peso?: number | null;
+  fuente?: string | null;
+  codigo?: string | null;
+  tipo?: string | null;
+  precio?: number | null;
+  fecha?: string | null;
+  ter?: number | null;
+  riesgo?: number | null;
+  clase?: string | null;
+  politica?: string | null;
+  rentabilidad1a?: number | null;
+}
+
 export interface ResultadoBusqueda {
   fuente: string;
   codigo: string;
   nombre: string;
   tipo: string;
   identificador: string;
+  isin?: string | null;
+  ticker?: string | null;
+  politica?: string | null;
+  cobertura?: string | null;
+  rentabilidad1a?: number | null;
+  cambioDia?: number | null;
+  patrimonio?: number | null;
+  estrellas?: number | null;
   vivo?: string | null;
   mercado?: string | null;
   precio: number;
   fecha: string;
   moneda: string;
+  carteraId?: string | null;
+  entidadSugerida?: string | null;
+  perfilRiesgo?: string | null;
+  comisionTotal?: string | null;
+  actualizado?: string | null;
+  fuenteUrl?: string | null;
+  numComponentes?: number | null;
+  planSecId?: string | null;
+  componentes?: ComponenteCarteraModelo[];
   ficha?: {
     ter?: number;
     riesgo?: number;
     clase?: string;
     gestora?: string;
   };
+  alternativas?: CotizacionAlternativa[];
 }
 
 export interface FilaImportacion {

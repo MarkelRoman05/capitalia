@@ -120,7 +120,7 @@ export class LoteSaldosModalComponent {
         const prods = this.store.cartera()?.productos || [];
         const manuales = prods.filter(
           (p) =>
-            !['fondo', 'etf', 'accion', 'cripto', 'commodity'].includes(p.tipo) ||
+            !['fondo', 'etf', 'accion', 'cripto', 'commodity', 'pension'].includes(p.tipo) ||
             p.fuente === 'manual',
         );
         const lista = manuales.length ? manuales : prods;
