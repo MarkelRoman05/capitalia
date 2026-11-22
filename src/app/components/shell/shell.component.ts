@@ -5,10 +5,11 @@ import { NavbarComponent } from '../navbar/navbar.component';
 import { FooterComponent } from '../footer/footer.component';
 import { ConfirmModalComponent } from '../modals/confirm-modal/confirm-modal.component';
 import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.component';
+import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'cap-shell',
-  imports: [RouterOutlet, NavbarComponent, FooterComponent, ConfirmModalComponent, PerfilModalComponent],
+  imports: [RouterOutlet, NavbarComponent, FooterComponent, ConfirmModalComponent, PerfilModalComponent, IconComponent],
   template: `
     <div class="app-shell">
       <cap-navbar />
@@ -19,9 +20,7 @@ import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.compon
             @if (store.mensajeExito()) {
               <div class="toast toast-exito" role="status">
                 <span class="toast-msg">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <cap-icon name="check" [size]="17" />
                   <span>{{ store.mensajeExito() }}</span>
                 </span>
                 <button
@@ -30,7 +29,7 @@ import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.compon
                   (click)="store.mensajeExito.set(null)"
                   aria-label="Cerrar aviso"
                 >
-                  ✕
+                  <cap-icon name="close" [size]="14" />
                 </button>
               </div>
             }
@@ -38,10 +37,7 @@ import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.compon
             @if (store.errorGlobal()) {
               <div class="toast toast-error" role="alert">
                 <span class="toast-msg">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M12 8v5M12 16h.01" />
-                  </svg>
+                  <cap-icon name="alert" [size]="17" />
                   <span>{{ store.errorGlobal() }}</span>
                 </span>
                 <button
@@ -50,7 +46,7 @@ import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.compon
                   (click)="store.errorGlobal.set(null)"
                   aria-label="Cerrar error"
                 >
-                  ✕
+                  <cap-icon name="close" [size]="14" />
                 </button>
               </div>
             }
@@ -60,7 +56,10 @@ import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.compon
         @if (store.datos()?.avisos?.length) {
           <div class="avisos-motor">
             @for (av of store.datos()!.avisos; track $index) {
-              <div class="aviso-linea">ℹ {{ av }}</div>
+              <div class="aviso-linea">
+                <cap-icon name="info" [size]="15" />
+                <span>{{ av }}</span>
+              </div>
             }
           </div>
         }

@@ -4832,3 +4832,32 @@ html[data-privado='1'] .valor-privado:hover {
     padding: 1.5rem 1.25rem;
   }
 }
+
+/* ---------- Iconografía SVG (<cap-icon>) y alineaciones ---------- */
+.girando {
+  transform-origin: center;
+}
+
+.aviso-linea {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.auth-success {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pm-result-cta,
+.pm-adv-state,
+.hito-icono,
+.faq-icono,
+.toast-close,
+.banco-sel-search-clear {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+}

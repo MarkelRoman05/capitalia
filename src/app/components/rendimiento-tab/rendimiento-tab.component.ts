@@ -3,11 +3,12 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
 import { ChartRenderFn, ChartService } from '../../services/chart.service';
 import { SvgChartComponent } from '../svg-chart/svg-chart.component';
+import { IconComponent } from '../icon/icon.component';
 import { ReferenciaIndexado } from '../../models/portfolio.model';
 
 @Component({
   selector: 'cap-rendimiento-tab',
-  imports: [SvgChartComponent],
+  imports: [SvgChartComponent, IconComponent],
   template: `
     @if (store.datos(); as d) {
       <!-- 1. RENTABILIDAD AÑO A AÑO (TWR) -->
@@ -181,9 +182,15 @@ import { ReferenciaIndexado } from '../../models/portfolio.model';
               <button
                 type="button"
                 class="btn-fantasma btn-sm"
+                [attr.aria-expanded]="mostrarRiesgo()"
                 (click)="mostrarRiesgo.set(!mostrarRiesgo())"
               >
-                {{ mostrarRiesgo() ? '▾ Ocultar métricas avanzadas de riesgo (Volatilidad, Sharpe, Base 100)' : '▸ Ver métricas avanzadas de riesgo (Volatilidad, Sharpe, Base 100)' }}
+                <cap-icon [name]="mostrarRiesgo() ? 'chevron-down' : 'chevron-right'" [size]="14" />
+                <span>{{
+                  mostrarRiesgo()
+                    ? 'Ocultar métricas avanzadas de riesgo (Volatilidad, Sharpe, Base 100)'
+                    : 'Ver métricas avanzadas de riesgo (Volatilidad, Sharpe, Base 100)'
+                }}</span>
               </button>
 
               @if (mostrarRiesgo()) {

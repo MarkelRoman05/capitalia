@@ -11,6 +11,7 @@ import { FormatService } from '../../services/format.service';
 import { ChartRenderFn, ChartService } from '../../services/chart.service';
 import { SvgChartComponent } from '../svg-chart/svg-chart.component';
 import { ObjetivoModalComponent } from '../modals/objetivo-modal/objetivo-modal.component';
+import { IconComponent } from '../icon/icon.component';
 import { GrupoAgrupado, ProductoCalculado } from '../../models/portfolio.model';
 
 interface FilaAportacionTabla {
@@ -27,7 +28,7 @@ interface FilaAportacionTabla {
 
 @Component({
   selector: 'cap-patrimonio-tab',
-  imports: [FormsModule, SvgChartComponent, ObjetivoModalComponent],
+  imports: [FormsModule, SvgChartComponent, ObjetivoModalComponent, IconComponent],
   template: `
     @if (store.datos(); as d) {
       @if (d.modo === 'demo') {
@@ -46,14 +47,15 @@ interface FilaAportacionTabla {
 
       @if (store.carteraVacia()) {
         <section class="bienvenida-card">
-          <div class="bienvenida-icono">✦</div>
+          <div class="bienvenida-icono"><cap-icon name="sparkle" [size]="28" /></div>
           <h2>Tu cartera en Capitalia está lista para empezar</h2>
           <p>
             Añade tus fondos indexados, ETFs, acciones, criptomonedas, cuentas remuneradas, inmuebles o préstamos. Capitalia descargará automáticamente las cotizaciones históricas y calculará tu rentabilidad TIR y FIFO.
           </p>
           <div class="bienvenida-acciones">
             <button type="button" class="btn-primario" (click)="irANuevoProducto()">
-              + Añadir mi primer producto
+              <cap-icon name="plus" [size]="15" />
+              <span>Añadir mi primer producto</span>
             </button>
             <button type="button" class="btn-secundario" (click)="irAImportar()">
               Importar CSV / Excel / MyInvestor
@@ -341,7 +343,8 @@ interface FilaAportacionTabla {
               </p>
             </div>
             <button type="button" class="btn-secundario btn-sm" (click)="irAGestionDatos()">
-              + Anotar operación
+              <cap-icon name="plus" [size]="14" />
+              <span>Anotar operación</span>
             </button>
           </div>
 
@@ -441,7 +444,7 @@ interface FilaAportacionTabla {
                 @if (esProductoInversion(c.id)) {
                   <div class="prod-card-hint">
                     <span>Ver ficha técnica</span>
-                    <span class="prod-card-arrow" aria-hidden="true">→</span>
+                    <cap-icon class="prod-card-arrow" name="arrow-right" [size]="13" />
                   </div>
                 }
               </article>
@@ -525,7 +528,9 @@ interface FilaAportacionTabla {
               @for (h of d.total.hitos; track h.importe) {
                 <div class="hito-item" [class.hito-logrado]="!!h.fecha">
                   <div class="hito-cab">
-                    <span class="hito-icono">{{ h.fecha ? '✓' : '◎' }}</span>
+                    <span class="hito-icono">
+                      <cap-icon [name]="h.fecha ? 'check' : 'target'" [size]="15" />
+                    </span>
                     <strong class="hito-imp mono valor-privado">{{ fmt.eur(h.importe, 0) }}</strong>
                   </div>
                   @if (h.fecha) {

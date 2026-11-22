@@ -31,5 +31,6 @@ Sistema de diseño editorial cuantitativo inspirado en terminales de banca priva
 
 - Usar exclusivamente variables CSS (`var(--surface)`, `var(--border)`, `var(--txt-2)`, etc.); nunca colores hexadecimales hardcoded para fondos o textos de interfaz.
 - Mantener la coherencia con la jerarquía de botones global (`.btn-primario`, `.btn-secundario`, `.btn-fantasma`, `.btn-peligro`, `.btn-peligro-outline`, `.btn-tabla`).
+- Usar **siempre iconos SVG** (`<cap-icon>` de `src/app/components/icon/icon.component.ts` o `<svg viewBox="0 0 24 24" aria-hidden="true">`); prohibido emplear emojis, glifos Unicode (`✕`, `✓`, `↻`, `→`, `‹`, `›`, `▸`, `▾`, `ℹ`, `⚠`, `✦`, `◎`) o `+`/`-` textuales como iconos de interfaz.
 - Aplicar `--surface-highlight` en tarjetas elevadas del tema oscuro para separarlas visualmente del fondo sin recurrir a sombras pesadas ni efectos neón.
 - Verificar en escritorio y bajo `@media (max-width: 720px)` que no hay desbordes ni saltos de layout.

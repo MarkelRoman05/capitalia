@@ -4,6 +4,7 @@ import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
 import { ChartRenderFn, ChartService } from '../../services/chart.service';
 import { SvgChartComponent } from '../svg-chart/svg-chart.component';
+import { IconComponent } from '../icon/icon.component';
 import { ResumenMensual } from '../../models/portfolio.model';
 
 interface FilaDetalleMes {
@@ -19,7 +20,7 @@ interface FilaDetalleMes {
 
 @Component({
   selector: 'cap-mes-tab',
-  imports: [FormsModule, SvgChartComponent],
+  imports: [FormsModule, SvgChartComponent, IconComponent],
   template: `
     @if (store.datos(); as d) {
       @if (!d.resumenMensual || !d.resumenMensual.length) {
@@ -43,7 +44,7 @@ interface FilaDetalleMes {
                 (click)="cambiarIndice(indiceActual() - 1)"
                 aria-label="Mes anterior"
               >
-                ‹
+                <cap-icon name="chevron-left" [size]="16" />
               </button>
               <select
                 class="input-select"
@@ -62,7 +63,7 @@ interface FilaDetalleMes {
                 (click)="cambiarIndice(indiceActual() + 1)"
                 aria-label="Mes siguiente"
               >
-                ›
+                <cap-icon name="chevron-right" [size]="16" />
               </button>
             </div>
           </div>

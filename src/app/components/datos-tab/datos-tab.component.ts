@@ -6,6 +6,7 @@ import { ProductoModalComponent } from '../modals/producto-modal/producto-modal.
 import { MovimientoModalComponent } from '../modals/movimiento-modal/movimiento-modal.component';
 import { ValoracionModalComponent } from '../modals/valoracion-modal/valoracion-modal.component';
 import { LoteSaldosModalComponent } from '../modals/lote-saldos-modal/lote-saldos-modal.component';
+import { IconComponent } from '../icon/icon.component';
 import {
   InformeImportacion,
   MovimientoCfg,
@@ -27,6 +28,7 @@ interface ArchivoLeido {
     MovimientoModalComponent,
     ValoracionModalComponent,
     LoteSaldosModalComponent,
+    IconComponent,
   ],
   template: `
     @if (store.cartera(); as c) {
@@ -281,7 +283,7 @@ interface ArchivoLeido {
                     (click)="filtroProdTexto.set('')"
                     aria-label="Limpiar filtro"
                   >
-                    ✕
+                    <cap-icon name="close" [size]="13" />
                   </button>
                 }
               </div>
@@ -397,7 +399,8 @@ interface ArchivoLeido {
                         (click)="abrirModalMovimiento(undefined, p.id)"
                         title="Anotar compra, venta o dividendo"
                       >
-                        + Compra
+                        <cap-icon name="plus" [size]="13" />
+                        <span>Compra</span>
                       </button>
                       <button
                         type="button"
@@ -414,7 +417,8 @@ interface ArchivoLeido {
                         (click)="abrirModalValoracion(undefined, p.id)"
                         title="Anotar saldo o valoración"
                       >
-                        + Saldo
+                        <cap-icon name="plus" [size]="13" />
+                        <span>Saldo</span>
                       </button>
                       <button
                         type="button"
@@ -471,7 +475,8 @@ interface ArchivoLeido {
                     primer activo, cuenta o inmueble.
                   </p>
                   <button type="button" class="btn-primario" (click)="abrirModalProducto()">
-                    + Añadir mi primer producto
+                    <cap-icon name="plus" [size]="15" />
+                    <span>Añadir mi primer producto</span>
                   </button>
                 } @else {
                   <p>No hay productos que coincidan con el filtro aplicado.</p>
@@ -570,7 +575,7 @@ interface ArchivoLeido {
                   (click)="filtroMovTexto.set('')"
                   aria-label="Limpiar búsqueda"
                 >
-                  ✕
+                  <cap-icon name="close" [size]="13" />
                 </button>
               }
             </div>
@@ -1007,11 +1012,13 @@ interface ArchivoLeido {
                   "
                   (click)="ejecutarConfirmacionImportar()"
                 >
-                  {{
-                    confirmandoImportacion()
-                      ? 'Guardando en PostgreSQL...'
-                      : '✓ Confirmar e importar ahora'
-                  }}
+                  @if (confirmandoImportacion()) {
+                    <cap-icon name="spinner" [size]="15" [spin]="true" />
+                    <span>Guardando en PostgreSQL…</span>
+                  } @else {
+                    <cap-icon name="check" [size]="15" />
+                    <span>Confirmar e importar ahora</span>
+                  }
                 </button>
               </div>
 

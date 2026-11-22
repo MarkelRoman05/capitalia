@@ -22,6 +22,12 @@ You are an expert in TypeScript, Angular, and scalable web application developme
 - It MUST pass all AXE checks.
 - It MUST follow all WCAG AA minimums, including focus management, color contrast, and ARIA attributes.
 
+## Icons
+
+- ALWAYS use SVG icons (`<svg>`) for every UI icon across the web application.
+- NEVER use emojis, Unicode glyphs (`✕`, `✓`, `↻`, `→`, `‹`, `›`, `▸`, `▾`, `ℹ`, `⚠`, `✦`, `◎`, `−`), or plain text symbols (`+`, `-`) as UI icons.
+- Prefer the shared `<cap-icon>` component (`src/app/components/icon/icon.component.ts`) for standard UI icons (`close`, `check`, `plus`, `minus`, `spinner`, `arrow-right`, `chevron-left`, `chevron-right`, `chevron-down`, `info`, `alert`, `sparkle`, `target`), or clean inline SVGs (`viewBox="0 0 24 24"`, `fill="none"`, `stroke="currentColor"`, `aria-hidden="true"`) for domain-specific icons.
+
 ## Components
 
 - Keep components small and focused on a single responsibility

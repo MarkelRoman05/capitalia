@@ -1,10 +1,11 @@
 import { Component, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
+import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-perfil-modal',
-  imports: [FormsModule],
+  imports: [FormsModule, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrar()',
   },
@@ -24,7 +25,7 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
               <h3 id="modal-perfil-titulo">Modificar perfil</h3>
             </div>
             <button type="button" class="btn-cerrar" (click)="cerrar()" aria-label="Cerrar">
-              ✕
+              <cap-icon name="close" [size]="16" />
             </button>
           </div>
 
@@ -88,7 +89,12 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
             <div class="modal-footer">
               <button type="button" class="btn-fantasma" (click)="cerrar()">Cancelar</button>
               <button type="submit" class="btn-primario" [disabled]="guardando">
-                {{ guardando ? 'Guardando…' : 'Guardar cambios' }}
+                @if (guardando) {
+                  <cap-icon name="spinner" [size]="15" [spin]="true" />
+                  <span>Guardando…</span>
+                } @else {
+                  <span>Guardar cambios</span>
+                }
               </button>
             </div>
           </form>

@@ -3,10 +3,11 @@ import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { LogoComponent } from '../logo/logo.component';
+import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'cap-login',
-  imports: [FormsModule, RouterLink, LogoComponent],
+  imports: [FormsModule, RouterLink, LogoComponent, IconComponent],
   template: `
     <div class="auth-screen">
       <section class="auth-pitch">
@@ -69,7 +70,8 @@ import { LogoComponent } from '../logo/logo.component';
 
           @if (store.mensajeExito()) {
             <div class="auth-success" role="status">
-              <span>✓ {{ store.mensajeExito() }}</span>
+              <cap-icon name="check" [size]="15" />
+              <span>{{ store.mensajeExito() }}</span>
             </div>
           }
 
@@ -111,10 +113,11 @@ import { LogoComponent } from '../logo/logo.component';
 
             <button type="submit" class="btn-primario auth-submit" [disabled]="enviando()">
               @if (enviando()) {
-                <span class="girando" aria-hidden="true">↻</span>
+                <cap-icon name="spinner" [size]="15" [spin]="true" />
                 <span>Verificando credenciales…</span>
               } @else {
-                <span>Entrar a mi cartera →</span>
+                <span>Entrar a mi cartera</span>
+                <cap-icon name="arrow-right" [size]="15" />
               }
             </button>
           </form>

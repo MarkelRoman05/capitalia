@@ -1,8 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
+import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-confirm-modal',
+  imports: [IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrarSiAbierto()',
   },
@@ -29,7 +31,7 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
               (click)="store.cerrarConfirmacion()"
               aria-label="Cerrar ventana"
             >
-              ✕
+              <cap-icon name="close" [size]="16" />
             </button>
           </div>
           <div class="modal-body">
@@ -50,7 +52,7 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
                 (click)="confirmar()"
               >
                 @if (ejecutando()) {
-                  <span class="girando" aria-hidden="true">↻</span>
+                  <cap-icon name="spinner" [size]="15" [spin]="true" />
                   <span>Procesando…</span>
                 } @else {
                   <span>{{ conf.textoConfirmar }}</span>

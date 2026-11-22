@@ -1,4 +1,5 @@
 import { Component, signal } from '@angular/core';
+import { IconComponent } from '../icon/icon.component';
 
 interface PreguntaAyuda {
   id: string;
@@ -8,6 +9,7 @@ interface PreguntaAyuda {
 
 @Component({
   selector: 'cap-ayuda-tab',
+  imports: [IconComponent],
   template: `
     <div class="dos-columnas bloque-seccion">
       <section class="panel-card">
@@ -23,9 +25,16 @@ interface PreguntaAyuda {
         <div class="faq-lista">
           @for (item of preguntas; track item.id) {
             <div class="faq-item" [class.abierto]="abierta() === item.id">
-              <button type="button" class="faq-pregunta" (click)="alternar(item.id)">
+              <button
+                type="button"
+                class="faq-pregunta"
+                [attr.aria-expanded]="abierta() === item.id"
+                (click)="alternar(item.id)"
+              >
                 <span>{{ item.pregunta }}</span>
-                <span class="faq-icono">{{ abierta() === item.id ? '−' : '+' }}</span>
+                <span class="faq-icono">
+                  <cap-icon [name]="abierta() === item.id ? 'minus' : 'plus'" [size]="16" />
+                </span>
               </button>
               @if (abierta() === item.id) {
                 <div class="faq-respuesta">

@@ -4,10 +4,11 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
 import { FormatService } from '../../../services/format.service';
 import { EntidadBanco, ProductoCfg, ResultadoBusqueda } from '../../../models/portfolio.model';
 import { BancoSelectorComponent } from './banco-selector.component';
+import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-producto-modal',
-  imports: [FormsModule, BancoSelectorComponent],
+  imports: [FormsModule, BancoSelectorComponent, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrarSiAbierto()',
   },
@@ -29,7 +30,7 @@ import { BancoSelectorComponent } from './banco-selector.component';
               </h3>
             </div>
             <button type="button" class="btn-cerrar" (click)="cerrar.emit()" aria-label="Cerrar">
-              ✕
+              <cap-icon name="close" [size]="16" />
             </button>
           </div>
 
@@ -148,7 +149,7 @@ import { BancoSelectorComponent } from './banco-selector.component';
                           (click)="limpiarBusqueda()"
                           aria-label="Limpiar búsqueda"
                         >
-                          ✕
+                          <cap-icon name="close" [size]="13" />
                         </button>
                       }
                     </div>
@@ -159,7 +160,7 @@ import { BancoSelectorComponent } from './banco-selector.component';
                       (click)="lanzarBusqueda()"
                     >
                       @if (buscando()) {
-                        <span class="girando" aria-hidden="true">↻</span>
+                        <cap-icon name="spinner" [size]="15" [spin]="true" />
                         <span>Buscando…</span>
                       } @else {
                         <span>Buscar</span>
@@ -235,7 +236,10 @@ import { BancoSelectorComponent } from './banco-selector.component';
                               {{ fmt.num(r.precio, r.precio >= 100 ? 2 : 4) }} {{ r.moneda }}
                             </strong>
                             <small class="pm-result-date mono">{{ r.fecha }}</small>
-                            <span class="pm-result-cta">Elegir →</span>
+                            <span class="pm-result-cta">
+                              <span>Elegir</span>
+                              <cap-icon name="arrow-right" [size]="13" />
+                            </span>
                           </div>
                         </button>
                       }
@@ -429,7 +433,13 @@ import { BancoSelectorComponent } from './banco-selector.component';
                   (click)="mostrarAvanzadoProd.set(!mostrarAvanzadoProd())"
                 >
                   <span>Configuración técnica de fuente de precios</span>
-                  <span>{{ mostrarAvanzadoProd() ? '▾ Ocultar' : '▸ Mostrar' }}</span>
+                  <span class="pm-adv-state">
+                    <cap-icon
+                      [name]="mostrarAvanzadoProd() ? 'chevron-down' : 'chevron-right'"
+                      [size]="14"
+                    />
+                    <span>{{ mostrarAvanzadoProd() ? 'Ocultar' : 'Mostrar' }}</span>
+                  </span>
                 </button>
 
                 @if (mostrarAvanzadoProd()) {
@@ -513,7 +523,7 @@ import { BancoSelectorComponent } from './banco-selector.component';
               [disabled]="guardando() || !formProd.nombre?.trim()"
             >
               @if (guardando()) {
-                <span class="girando" aria-hidden="true">↻</span>
+                <cap-icon name="spinner" [size]="15" [spin]="true" />
                 <span>Guardando…</span>
               } @else {
                 <span>{{ productoEditar() ? 'Guardar cambios' : 'Crear producto' }}</span>

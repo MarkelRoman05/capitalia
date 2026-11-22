@@ -3,12 +3,13 @@ import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 import { FormatService } from '../../../services/format.service';
 import { MovimientoCfg, ProductoCfg } from '../../../models/portfolio.model';
+import { IconComponent } from '../../icon/icon.component';
 
 type TipoMov = 'compra' | 'venta' | 'dividendo' | 'comision';
 
 @Component({
   selector: 'cap-movimiento-modal',
-  imports: [FormsModule],
+  imports: [FormsModule, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrarSiAbierto()',
   },
@@ -36,7 +37,7 @@ type TipoMov = 'compra' | 'venta' | 'dividendo' | 'comision';
               </h3>
             </div>
             <button type="button" class="btn-cerrar" (click)="cerrar.emit()" aria-label="Cerrar">
-              ✕
+              <cap-icon name="close" [size]="16" />
             </button>
           </div>
 
@@ -309,7 +310,7 @@ type TipoMov = 'compra' | 'venta' | 'dividendo' | 'comision';
                 [disabled]="guardando() || !formularioValido()"
               >
                 @if (guardando()) {
-                  <span class="girando" aria-hidden="true">↻</span>
+                  <cap-icon name="spinner" [size]="15" [spin]="true" />
                   <span>Guardando…</span>
                 } @else {
                   <span>{{

@@ -12,6 +12,7 @@ import {
 } from '@angular/core';
 import { EntidadBanco } from '../../../models/portfolio.model';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
+import { IconComponent } from '../../icon/icon.component';
 
 function normalizarTexto(s: string): string {
   return (s || '')
@@ -23,6 +24,7 @@ function normalizarTexto(s: string): string {
 
 @Component({
   selector: 'cap-banco-selector',
+  imports: [IconComponent],
   host: {
     '(document:click)': 'alClicDocumento($event)',
     '(document:keydown.escape)': 'alEscape($event)',
@@ -91,7 +93,7 @@ function normalizarTexto(s: string): string {
             aria-label="Quitar banco seleccionado"
             title="Limpiar"
           >
-            ✕
+            <cap-icon name="close" [size]="13" />
           </button>
         }
       </div>
@@ -124,7 +126,7 @@ function normalizarTexto(s: string): string {
                 (click)="alEscribirFiltro('')"
                 aria-label="Borrar búsqueda"
               >
-                ✕
+                <cap-icon name="close" [size]="13" />
               </button>
             }
           </div>
@@ -169,7 +171,7 @@ function normalizarTexto(s: string): string {
                     item.categoria || item.dominio || 'Reciente'
                   }}</span>
                   @if (esSeleccionada(item.nombre)) {
-                    <span class="banco-sel-check" aria-hidden="true">✓</span>
+                    <cap-icon class="banco-sel-check" name="check" [size]="15" />
                   }
                 </button>
               }
@@ -179,7 +181,7 @@ function normalizarTexto(s: string): string {
             @if (filtro().trim().length >= 2) {
               @if (buscandoOnline()) {
                 <div class="banco-sel-loading">
-                  <span class="girando" aria-hidden="true">↻</span>
+                  <cap-icon name="spinner" [size]="14" [spin]="true" />
                   <span>Buscando bancos y logos en la base de datos y online…</span>
                 </div>
               } @else if (onlineFiltradas().length) {
@@ -219,7 +221,7 @@ function normalizarTexto(s: string): string {
                     </span>
                     <span class="banco-sel-opt-cat">{{ item.dominio || item.categoria }}</span>
                     @if (esSeleccionada(item.nombre)) {
-                      <span class="banco-sel-check" aria-hidden="true">✓</span>
+                      <cap-icon class="banco-sel-check" name="check" [size]="15" />
                     }
                   </button>
                 }
@@ -265,7 +267,7 @@ function normalizarTexto(s: string): string {
                 </span>
                 <span class="banco-sel-opt-cat">{{ item.categoria || item.dominio }}</span>
                 @if (esSeleccionada(item.nombre)) {
-                  <span class="banco-sel-check" aria-hidden="true">✓</span>
+                  <cap-icon class="banco-sel-check" name="check" [size]="15" />
                 }
               </button>
             }
@@ -276,7 +278,9 @@ function normalizarTexto(s: string): string {
                 class="banco-sel-opt banco-sel-custom"
                 (click)="elegir({ nombre: filtro().trim(), categoria: 'Entidad personalizada' })"
               >
-                <span class="banco-logo-frame banco-logo-custom" aria-hidden="true">+</span>
+                <span class="banco-logo-frame banco-logo-custom" aria-hidden="true">
+                  <cap-icon name="plus" [size]="15" />
+                </span>
                 <span class="banco-sel-opt-main">
                   Usar «<strong>{{ filtro().trim() }}</strong>» como entidad personalizada
                 </span>

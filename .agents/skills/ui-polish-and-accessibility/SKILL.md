@@ -21,7 +21,7 @@ Checklist obligatoria antes de dar por terminado cualquier cambio visual o estru
   - Botones de estado binario (ej. Modo discreto) con `[attr.aria-pressed]`.
   - Pestañas activas con `[attr.aria-current]="'page'"` o estado equivalente; acordeones con `[attr.aria-expanded]`.
   - Avisos de éxito con `role="status"` y errores con `role="alert"`.
-  - Botones solo-icono con `aria-label` descriptivo; SVG decorativos con `aria-hidden="true"`.
+  - Botones solo-icono con `aria-label` descriptivo; usar **siempre SVG** (`<cap-icon>` o `<svg aria-hidden="true">`) y nunca glifos Unicode, emojis ni `+`/`-` de texto como iconos.
 
 ## 3. Ergonomía Responsive y Móvil
 - Evitar cualquier overflow horizontal (`overflow-x: clip`, `min-width: 0` en hijos grid/flex).
