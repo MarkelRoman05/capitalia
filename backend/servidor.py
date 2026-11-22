@@ -8,6 +8,7 @@ y al motor financiero (motor.py, buscar.py, importar.py, almacen.py).
 
 import collections
 import datetime as dt
+import html as html_lib
 import json
 import logging
 import os
@@ -15,6 +16,9 @@ import secrets
 import sys
 import threading
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 from flask import Flask, Response, jsonify, request, send_from_directory, session
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -72,13 +76,15 @@ app.config.update(
 _INTENTOS_AUTH = collections.defaultdict(list)
 MAX_INTENTOS_VENTANA = 15
 VENTANA_SEGUNDOS = 60
+MAX_INTENTOS_RESET = 5
+VENTANA_RESET_SEGUNDOS = 15 * 60
 
 
-def _comprobar_rate_limit(clave):
+def _comprobar_rate_limit(clave, max_intentos=MAX_INTENTOS_VENTANA, ventana=VENTANA_SEGUNDOS):
     ahora = time.time()
-    lista = [t for t in _INTENTOS_AUTH[clave] if ahora - t < VENTANA_SEGUNDOS]
+    lista = [t for t in _INTENTOS_AUTH[clave] if ahora - t < ventana]
     _INTENTOS_AUTH[clave] = lista
-    if len(lista) >= MAX_INTENTOS_VENTANA:
+    if len(lista) >= max_intentos:
         return False
     _INTENTOS_AUTH[clave].append(ahora)
     return True
@@ -87,6 +93,8 @@ def _comprobar_rate_limit(clave):
 RUTAS_API_PUBLICAS = {
     "/api/auth/login",
     "/api/auth/registro",
+    "/api/auth/recuperar",
+    "/api/auth/restablecer",
     "/api/auth/yo",
     "/api/ping",
     "/api/version",
@@ -292,6 +300,177 @@ def auth_perfil():
         logging.exception("Fallo al actualizar el perfil del usuario %s", uid)
         return jsonify(ok=False, errores=["No se ha podido actualizar el perfil en este momento."]), 500
     return jsonify(ok=True, usuario=u)
+
+
+def _leer_config_n8n():
+    """Resuelve la configuración del webhook de n8n desde entorno o archivos .env."""
+    env_local = db._lee_env_archivo(os.path.join(RAIZ, ".env"))
+    env_infra = db._lee_env_archivo(os.path.abspath(os.path.join(RAIZ, "..", "..", ".env")))
+
+    def obt(clave):
+        return (os.environ.get(clave) or env_local.get(clave) or env_infra.get(clave) or "").strip()
+
+    webhook_url = obt("CAPITALIA_N8N_WEBHOOK_RESET")
+    webhook_secret = obt("CAPITALIA_N8N_WEBHOOK_SECRET")
+    public_url = obt("CAPITALIA_PUBLIC_URL").rstrip("/")
+    return webhook_url, webhook_secret, public_url
+
+
+def _url_http_valida(url):
+    if not url:
+        return False
+    parsed = urllib.parse.urlparse(url)
+    return parsed.scheme in ("http", "https") and bool(parsed.netloc)
+
+
+def _enviar_webhook_n8n_reset(webhook_url, webhook_secret, email, nombre, enlace, expira_minutos):
+    """Envía la petición JSON al webhook de n8n para despachar el correo de recuperación."""
+    nombre_limpio = (nombre or "inversor").strip() or "inversor"
+    nombre_html = html_lib.escape(nombre_limpio, quote=True)
+    enlace_html = html_lib.escape(enlace, quote=True)
+    asunto = "Restablecer contraseña · Capitalia"
+
+    texto = (
+        f"Hola {nombre_limpio},\n\n"
+        "Has solicitado restablecer tu contraseña en Capitalia.\n"
+        f"Abre este enlace (válido durante {expira_minutos} minutos):\n\n"
+        f"{enlace}\n\n"
+        "Si no solicitaste este cambio, puedes ignorar este correo de forma segura."
+    )
+
+    cuerpo_html = (
+        '<div style="font-family:Inter,Segoe UI,Arial,sans-serif;max-width:540px;margin:0 auto;'
+        'padding:24px;color:#14161f;background:#ffffff;border:1px solid #e5e7eb;border-radius:12px;">'
+        '<h2 style="margin:0 0 12px;font-size:20px;color:#14161f;">Restablecer contraseña</h2>'
+        f'<p style="margin:0 0 14px;line-height:1.55;">Hola <strong>{nombre_html}</strong>,</p>'
+        '<p style="margin:0 0 18px;line-height:1.55;">Has solicitado restablecer tu contraseña de acceso en '
+        "<strong>Capitalia</strong>. Pulsa el siguiente botón para elegir una nueva clave:</p>"
+        f'<p style="margin:0 0 20px;"><a href="{enlace_html}" '
+        'style="display:inline-block;padding:12px 20px;background:#2f43c9;color:#ffffff;'
+        'text-decoration:none;border-radius:8px;font-weight:600;">Cambiar contraseña</a></p>'
+        f'<p style="margin:0 0 12px;font-size:13px;color:#525866;">Este enlace caduca en {expira_minutos} minutos '
+        "y solo se puede usar una vez.</p>"
+        '<p style="margin:0;font-size:12px;color:#6c7286;word-break:break-all;">'
+        f"Si el botón no funciona, copia este enlace en tu navegador:<br>{enlace_html}</p>"
+        "</div>"
+    )
+
+    payload = json.dumps({
+        "evento": "recuperar_contrasena",
+        "app": "Capitalia",
+        "email": email,
+        "nombre": nombre_limpio,
+        "enlace": enlace,
+        "expiraMinutos": expira_minutos,
+        "asunto": asunto,
+        "html": cuerpo_html,
+        "texto": texto,
+    }).encode("utf-8")
+
+    headers = {
+        "Content-Type": "application/json",
+        "User-Agent": "Capitalia/1.0",
+    }
+    if webhook_secret:
+        headers["X-Capitalia-Webhook-Secret"] = webhook_secret
+
+    req = urllib.request.Request(webhook_url, data=payload, headers=headers, method="POST")
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        if resp.status >= 400:
+            raise urllib.error.HTTPError(webhook_url, resp.status, "Error del webhook", resp.headers, None)
+
+
+@app.post("/api/auth/recuperar")
+def auth_recuperar():
+    if not db.activo():
+        return jsonify(ok=False, errores=["La recuperación de contraseña requiere PostgreSQL activo."]), 400
+
+    ip = request.remote_addr or "local"
+    if not _comprobar_rate_limit(f"reset-ip:{ip}", MAX_INTENTOS_RESET, VENTANA_RESET_SEGUNDOS):
+        return jsonify(ok=False, errores=["Demasiadas solicitudes seguidas. Espera unos minutos."]), 429
+
+    webhook_url, webhook_secret, public_url = _leer_config_n8n()
+    if not _url_http_valida(webhook_url):
+        return jsonify(
+            ok=False,
+            errores=[
+                "El envío de correo no está configurado todavía. Define CAPITALIA_N8N_WEBHOOK_RESET en el servidor."
+            ],
+        ), 503
+
+    datos = request.get_json(silent=True) or {}
+    email = (datos.get("email") or "").strip().lower()
+    if not db.RE_EMAIL.match(email):
+        return jsonify(ok=False, errores=["Escribe un correo electrónico válido."]), 400
+
+    if not _comprobar_rate_limit(f"reset-mail:{email}", MAX_INTENTOS_RESET, VENTANA_RESET_SEGUNDOS):
+        return jsonify(ok=False, errores=["Demasiadas solicitudes para este correo. Espera unos minutos."]), 429
+
+    try:
+        info = db.crear_token_recuperacion(email)
+    except db.ErrorUsuario as e:
+        return jsonify(ok=False, errores=e.errores), 400
+    except Exception:
+        logging.exception("Error interno generando token de recuperación")
+        return jsonify(ok=False, errores=["No se pudo procesar la solicitud en este momento."]), 500
+
+    if info:
+        # TODO(security): Configurar CAPITALIA_PUBLIC_URL en producción para evitar spoofing de cabecera Host.
+        base_url = public_url if _url_http_valida(public_url) else request.host_url.rstrip("/")
+        enlace = f"{base_url}/restablecer#token={info['token']}"
+        try:
+            _enviar_webhook_n8n_reset(
+                webhook_url,
+                webhook_secret,
+                info["email"],
+                info["nombre"],
+                enlace,
+                info["expira_minutos"],
+            )
+        except urllib.error.HTTPError as e:
+            logging.error("Fallo al invocar el webhook de n8n (HTTP %s)", e.code)
+            return jsonify(
+                ok=False,
+                errores=["No se pudo contactar con el servicio de correo (n8n). Inténtalo en unos minutos."],
+            ), 502
+        except Exception as e:
+            logging.error("Fallo al invocar el webhook de n8n (%s)", type(e).__name__)
+            return jsonify(
+                ok=False,
+                errores=["No se pudo contactar con el servicio de correo (n8n). Inténtalo en unos minutos."],
+            ), 502
+
+    return jsonify(
+        ok=True,
+        mensaje=(
+            "Si existe una cuenta asociada a ese correo, recibirás en unos instantes "
+            "un enlace para restablecer tu contraseña."
+        ),
+    )
+
+
+@app.post("/api/auth/restablecer")
+def auth_restablecer():
+    if not db.activo():
+        return jsonify(ok=False, errores=["El restablecimiento requiere PostgreSQL activo."]), 400
+
+    ip = request.remote_addr or "local"
+    if not _comprobar_rate_limit(f"reset-confirm:{ip}", MAX_INTENTOS_RESET, VENTANA_RESET_SEGUNDOS):
+        return jsonify(ok=False, errores=["Demasiados intentos seguidos. Espera unos minutos."]), 429
+
+    datos = request.get_json(silent=True) or {}
+    token = datos.get("token")
+    clave = datos.get("clave") or datos.get("password")
+    try:
+        db.restablecer_clave_con_token(token, clave)
+    except db.ErrorUsuario as e:
+        return jsonify(ok=False, errores=e.errores), 400
+    except Exception:
+        logging.exception("Error interno al restablecer contraseña")
+        return jsonify(ok=False, errores=["No se pudo actualizar la contraseña en este momento."]), 500
+
+    session.clear()
+    return jsonify(ok=True, mensaje="Contraseña actualizada correctamente. Ya puedes iniciar sesión.")
 
 
 # ---------------------------------------------------------------- API del Panel y Cartera

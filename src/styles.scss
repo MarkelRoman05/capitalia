@@ -241,6 +241,66 @@ body {
   margin-bottom: 1rem;
 }
 
+.auth-success {
+  background: var(--pos-bg);
+  color: var(--pos);
+  border: 1px solid color-mix(in srgb, var(--pos) 35%, transparent);
+  border-radius: var(--r-sm);
+  padding: 0.65rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.auth-success-box {
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--pos) 40%, var(--border));
+  border-radius: var(--r-md);
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.auth-success-box h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--pos);
+}
+
+.auth-success-box p {
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
+.auth-success-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+.campo-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.auth-forgot-link {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.auth-forgot-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .auth-form {
   display: flex;
   flex-direction: column;

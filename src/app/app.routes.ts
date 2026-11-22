@@ -16,6 +16,20 @@ export const routes: Routes = [
       import('./components/registro/registro.component').then((m) => m.RegistroComponent),
   },
   {
+    path: 'recuperar',
+    title: 'Recuperar contraseña · Capitalia',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./components/recuperar/recuperar.component').then((m) => m.RecuperarComponent),
+  },
+  {
+    path: 'restablecer',
+    title: 'Restablecer contraseña · Capitalia',
+    canActivate: [guestGuard],
+    loadComponent: () =>
+      import('./components/restablecer/restablecer.component').then((m) => m.RestablecerComponent),
+  },
+  {
     path: '',
     canActivate: [authGuard],
     loadComponent: () => import('./components/shell/shell.component').then((m) => m.ShellComponent),

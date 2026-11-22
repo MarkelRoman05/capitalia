@@ -610,6 +610,49 @@ export class PortfolioStoreService {
     }
   }
 
+  async solicitarRecuperacion(email: string): Promise<{ ok: boolean; mensaje?: string }> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.post<{ ok: boolean; mensaje?: string }>('/api/auth/recuperar', { email })
+      );
+      if (resp.ok) {
+        this.errorGlobal.set(null);
+        return { ok: true, mensaje: resp.mensaje };
+      }
+      this.notificarError('No se pudo enviar el enlace de recuperación.');
+      return { ok: false };
+    } catch (err: unknown) {
+      this.notificarError(
+        this.extraerMensajeError(err, 'No se pudo enviar el enlace de recuperación.')
+      );
+      return { ok: false };
+    }
+  }
+
+  async restablecerContrasena(token: string, clave: string): Promise<boolean> {
+    try {
+      const resp = await firstValueFrom(
+        this.http.post<{ ok: boolean; mensaje?: string }>('/api/auth/restablecer', {
+          token,
+          clave,
+        })
+      );
+      if (resp.ok) {
+        this.notificarExito(
+          resp.mensaje || 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.'
+        );
+        void this.router.navigate(['/login']);
+        return true;
+      }
+      return false;
+    } catch (err: unknown) {
+      this.notificarError(
+        this.extraerMensajeError(err, 'No se pudo actualizar la contraseña.')
+      );
+      return false;
+    }
+  }
+
   async logout(): Promise<void> {
     try {
       await firstValueFrom(this.http.post('/api/auth/logout', {}));

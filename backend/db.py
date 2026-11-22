@@ -11,10 +11,12 @@ Gestiona en PostgreSQL:
 """
 
 import datetime as dt
+import hashlib
 import json
 import logging
 import os
 import re
+import secrets
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import quote
 
@@ -36,6 +38,7 @@ MIN_CLAVE = 8
 MAX_CLAVE = 128
 MAX_NOMBRE = 80
 COPIAS_MAX = 20
+MINUTOS_TOKEN_RESET = 30
 
 # TODO(security): Consider adding OAuth2/OIDC providers, MFA (TOTP/WebAuthn), and leaked password detection (HIBP).
 
@@ -227,6 +230,15 @@ def _crea_tablas():
                 veces         INTEGER NOT NULL DEFAULT 1,
                 PRIMARY KEY (usuario_id, entidad_id)
             );
+
+            CREATE TABLE IF NOT EXISTS tokens_recuperacion (
+                id            SERIAL PRIMARY KEY,
+                usuario_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+                token_hash    TEXT UNIQUE NOT NULL,
+                expira        TIMESTAMPTZ NOT NULL,
+                usado         TIMESTAMPTZ,
+                creado        TIMESTAMPTZ NOT NULL DEFAULT now()
+            );
         """)
         _seed_entidades(cur)
         con.commit()
@@ -391,6 +403,82 @@ def actualizar_usuario(uid, nombre=None, email=None, password_actual=None, passw
                 raise ErrorUsuario(["Ya existe una cuenta registrada con ese correo electrónico."])
             logging.exception("Error actualizando usuario %s", uid)
             raise ErrorUsuario(["No se ha podido actualizar el perfil en este momento."])
+
+
+def crear_token_recuperacion(email):
+    """Genera un token temporal de un solo uso y guarda solo su hash SHA-256 en PostgreSQL."""
+    email = (email or "").strip().lower()
+    if not RE_EMAIL.match(email):
+        raise ErrorUsuario(["Escribe un correo electrónico válido."])
+
+    with _conectar() as con, con.cursor() as cur:
+        cur.execute(
+            "SELECT id, email, nombre FROM usuarios WHERE email = %s",
+            (email,),
+        )
+        fila = cur.fetchone()
+        if not fila:
+            return None
+
+        cur.execute(
+            "DELETE FROM tokens_recuperacion "
+            "WHERE usuario_id = %s AND (usado IS NULL OR expira < now())",
+            (fila["id"],),
+        )
+        token = secrets.token_urlsafe(32)
+        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+        expira = dt.datetime.now(dt.timezone.utc) + dt.timedelta(minutes=MINUTOS_TOKEN_RESET)
+        cur.execute(
+            "INSERT INTO tokens_recuperacion (usuario_id, token_hash, expira) "
+            "VALUES (%s, %s, %s)",
+            (fila["id"], token_hash, expira),
+        )
+        con.commit()
+        return {
+            "token": token,
+            "email": fila["email"],
+            "nombre": fila["nombre"] or "",
+            "expira_minutos": MINUTOS_TOKEN_RESET,
+        }
+
+
+def restablecer_clave_con_token(token, password_nueva):
+    """Valida token de un solo uso, actualiza la contraseña con hash salado y lo consume."""
+    token = (token or "").strip()
+    if not token or len(token) > 256:
+        raise ErrorUsuario(["El enlace de recuperación no es válido o ha caducado. Solicita uno nuevo."])
+
+    nueva_clave = password_nueva or ""
+    if len(nueva_clave) < MIN_CLAVE or len(nueva_clave) > MAX_CLAVE:
+        raise ErrorUsuario([f"La contraseña debe tener entre {MIN_CLAVE} y {MAX_CLAVE} caracteres."])
+
+    token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+    # TODO(security): Añadir invalidación de sesiones activas en otros dispositivos (p. ej. columna session_version) y detección de contraseñas filtradas (HIBP).
+    with _conectar() as con, con.cursor() as cur:
+        cur.execute(
+            """
+            UPDATE tokens_recuperacion
+            SET usado = now()
+            WHERE token_hash = %s AND usado IS NULL AND expira > now()
+            RETURNING usuario_id
+            """,
+            (token_hash,),
+        )
+        fila = cur.fetchone()
+        if not fila:
+            con.rollback()
+            raise ErrorUsuario(["El enlace de recuperación no es válido o ha caducado. Solicita uno nuevo."])
+
+        cur.execute(
+            "UPDATE usuarios SET password_hash = %s WHERE id = %s",
+            (generate_password_hash(nueva_clave), fila["usuario_id"]),
+        )
+        cur.execute(
+            "DELETE FROM tokens_recuperacion WHERE usuario_id = %s AND usado IS NULL",
+            (fila["usuario_id"],),
+        )
+        con.commit()
+        return True
 
 
 # ---------------------------------------------------------------- carteras en PostgreSQL

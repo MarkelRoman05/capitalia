@@ -67,6 +67,12 @@ import { LogoComponent } from '../logo/logo.component';
             <a routerLink="/registro" class="auth-tab-link"> Crear cuenta </a>
           </div>
 
+          @if (store.mensajeExito()) {
+            <div class="auth-success" role="status">
+              <span>✓ {{ store.mensajeExito() }}</span>
+            </div>
+          }
+
           @if (store.errorGlobal()) {
             <div class="auth-alert" role="alert">
               <span>{{ store.errorGlobal() }}</span>
@@ -88,7 +94,10 @@ import { LogoComponent } from '../logo/logo.component';
             </div>
 
             <div class="campo">
-              <label for="auth-clave">Contraseña</label>
+              <div class="campo-label-row">
+                <label for="auth-clave">Contraseña</label>
+                <a routerLink="/recuperar" class="auth-forgot-link">¿Olvidaste tu contraseña?</a>
+              </div>
               <input
                 id="auth-clave"
                 type="password"
