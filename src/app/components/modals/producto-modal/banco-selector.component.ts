@@ -73,16 +73,7 @@ function normalizarTexto(s: string): string {
             <span class="banco-sel-placeholder">Seleccionar banco, bróker o entidad…</span>
           }
 
-          <svg class="banco-sel-caret" viewBox="0 0 12 12" aria-hidden="true">
-            <path
-              d="M2.5 4.5 6 8l3.5-3.5"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="1.6"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            />
-          </svg>
+          <cap-icon class="banco-sel-caret" name="chevron-down" [size]="14" />
         </button>
 
         @if (valor().trim()) {

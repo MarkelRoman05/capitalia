@@ -2,6 +2,7 @@ import { Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PortfolioStoreService, TabId } from '../../services/portfolio-store.service';
 import { LogoComponent } from '../logo/logo.component';
+import { IconComponent } from '../icon/icon.component';
 
 export interface NavItem {
   id: TabId;
@@ -11,7 +12,7 @@ export interface NavItem {
 
 @Component({
   selector: 'cap-navbar',
-  imports: [RouterLink, RouterLinkActive, LogoComponent],
+  imports: [RouterLink, RouterLinkActive, LogoComponent, IconComponent],
   styles: [':host { display: contents; }'],
   host: {
     '(document:click)': 'cerrarMenu()',
@@ -143,16 +144,7 @@ export interface NavItem {
                   (u.nombre || u.email)[0].toUpperCase()
                 }}</span>
                 <span class="user-menu-name">{{ u.nombre || u.email }}</span>
-                <svg class="user-menu-caret" viewBox="0 0 12 12" aria-hidden="true">
-                  <path
-                    d="M2.5 4.5 6 8l3.5-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.6"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                  />
-                </svg>
+                <cap-icon class="user-menu-caret" name="chevron-down" [size]="13" />
               </button>
 
               @if (menuAbierto()) {
