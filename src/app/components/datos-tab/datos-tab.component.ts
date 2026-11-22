@@ -9,6 +9,7 @@ import { LoteSaldosModalComponent } from '../modals/lote-saldos-modal/lote-saldo
 import {
   InformeImportacion,
   MovimientoCfg,
+  ProductoCalculado,
   ProductoCfg,
   ValoracionCfg,
 } from '../../models/portfolio.model';
@@ -101,7 +102,9 @@ interface ArchivoLeido {
               stroke-linejoin="round"
               aria-hidden="true"
             >
-              <path d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" />
+              <path
+                d="M19 7V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"
+              />
               <path d="M16 12h5v4h-5a2 2 0 0 1 0-4Z" />
             </svg>
             <span>Saldos y valores</span>
@@ -163,7 +166,18 @@ interface ArchivoLeido {
             class="btn-peligro-outline btn-sm"
             (click)="confirmarVaciarCartera()"
           >
-            Vaciar cartera
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="1.9"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+            </svg>
+            <span>Vaciar cartera</span>
           </button>
         </div>
       </div>
@@ -182,101 +196,295 @@ interface ArchivoLeido {
               </p>
             </div>
             <div class="header-btns">
-              <button type="button" class="btn-fantasma btn-sm" (click)="store.repartirColores()">
-                Repartir colores
-              </button>
+              @if (c.productos.length > 1) {
+                <button
+                  type="button"
+                  class="btn-fantasma btn-sm"
+                  (click)="store.repartirColores()"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="1.9"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                  >
+                    <circle cx="12" cy="12" r="9" />
+                    <path d="M12 3v9l6.5 4.5" />
+                  </svg>
+                  <span>Repartir colores</span>
+                </button>
+              }
               <button type="button" class="btn-primario" (click)="abrirModalProducto()">
-                + Añadir producto
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                <span>Añadir producto</span>
               </button>
             </div>
           </div>
 
-          <div class="tabla-scroll">
-            <table class="tabla-datos">
-              <thead>
-                <tr>
-                  <th>Nombre</th>
-                  <th>Tipo</th>
-                  <th>ISIN / Ticker / Fuente</th>
-                  <th>Entidad / Clase</th>
-                  <th class="num">Valor actual</th>
-                  <th class="num">Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (p of c.productos; track p.id) {
-                  <tr>
-                    <td>
-                      <div class="celda-prod-nombre">
-                        <span
-                          class="dot"
-                          [style.background]="colorProducto(p.id)"
-                        ></span>
-                        <div>
-                          <strong>{{ p.nombre }}</strong>
-                          @if (p.largoPlazo) {
-                            <span class="tag tag-lp" style="margin-left: 0.4rem">LP</span>
-                          }
-                        </div>
-                      </div>
-                    </td>
-                    <td>
-                      <span class="tag">{{ etiquetaTipo(p.tipo) }}</span>
-                    </td>
-                    <td class="mono">
-                      {{ p.identificador || p.codigo || '—' }}
-                      <small class="muted">({{ p.fuente }})</small>
-                    </td>
-                    <td>
-                      {{ p.entidad || '—' }}
-                      @if (p.clase) {
-                        <small class="muted">· {{ p.clase }}</small>
-                      }
-                    </td>
-                    <td class="num mono valor-privado">
+          @if (c.productos.length) {
+            <div class="datos-kpi-strip">
+              <div class="datos-kpi">
+                <span>Total activos</span>
+                <strong class="mono">{{ productosStats().total }}</strong>
+              </div>
+              <div class="datos-kpi">
+                <span>Cotización automática</span>
+                <strong class="mono">{{ productosStats().cotizados }}</strong>
+              </div>
+              <div class="datos-kpi">
+                <span>Saldos manuales</span>
+                <strong class="mono">{{ productosStats().manuales }}</strong>
+              </div>
+              <div class="datos-kpi">
+                <span>Valor neto actual</span>
+                <strong class="mono valor-privado">{{
+                  fmt.eur(productosStats().valorTotal, 2)
+                }}</strong>
+              </div>
+            </div>
+
+            <div class="datos-toolbar">
+              <div class="datos-search-wrap">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  aria-hidden="true"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
+                </svg>
+                <input
+                  type="text"
+                  [ngModel]="filtroProdTexto()"
+                  (ngModelChange)="filtroProdTexto.set($event)"
+                  placeholder="Buscar por nombre, ISIN, banco o clase…"
+                  aria-label="Filtrar productos"
+                />
+                @if (filtroProdTexto()) {
+                  <button
+                    type="button"
+                    class="pm-search-clear"
+                    (click)="filtroProdTexto.set('')"
+                    aria-label="Limpiar filtro"
+                  >
+                    ✕
+                  </button>
+                }
+              </div>
+
+              <div class="seg-group" role="group" aria-label="Filtrar por tipo de seguimiento">
+                <button
+                  type="button"
+                  class="seg-btn"
+                  [class.on]="filtroProdModo() === 'todos'"
+                  (click)="filtroProdModo.set('todos')"
+                >
+                  Todos ({{ productosStats().total }})
+                </button>
+                <button
+                  type="button"
+                  class="seg-btn"
+                  [class.on]="filtroProdModo() === 'cotizado'"
+                  (click)="filtroProdModo.set('cotizado')"
+                >
+                  Cotizados ({{ productosStats().cotizados }})
+                </button>
+                <button
+                  type="button"
+                  class="seg-btn"
+                  [class.on]="filtroProdModo() === 'manual'"
+                  (click)="filtroProdModo.set('manual')"
+                >
+                  Manuales ({{ productosStats().manuales }})
+                </button>
+              </div>
+            </div>
+          }
+
+          <div class="datos-prod-list">
+            @for (p of productosFiltrados(); track p.id) {
+              @let calc = infoCalculadaProducto(p.id);
+              @let logo = logoEntidad(p.entidad);
+              <article class="datos-prod-row" [style.--prod-color]="colorProducto(p.id)">
+                <div class="datos-prod-main">
+                  <div class="datos-prod-title-line">
+                    <strong class="datos-prod-name">{{ p.nombre }}</strong>
+                    <span [class]="'pm-type-badge pm-type-' + (p.tipo || 'otro')">
+                      {{ etiquetaTipo(p.tipo) }}
+                    </span>
+                    @if (p.largoPlazo) {
+                      <span class="tag tag-lp">LP</span>
+                    }
+                  </div>
+
+                  <div class="datos-prod-meta">
+                    @if (p.entidad) {
+                      <span class="datos-prod-bank">
+                        @if (logo) {
+                          <img
+                            [src]="logo"
+                            [alt]="p.entidad"
+                            loading="lazy"
+                            (error)="marcarLogoFallido(logo)"
+                          />
+                        }
+                        <span>{{ p.entidad }}</span>
+                      </span>
+                    }
+                    @if (p.identificador || p.codigo) {
+                      <span class="tag mono">{{ p.identificador || p.codigo }}</span>
+                    }
+                    <span class="tag">{{ p.fuente }}</span>
+                    @if (p.clase) {
+                      <span class="tag">{{ p.clase }}</span>
+                    }
+                    @if (p.ter !== null && p.ter !== undefined && p.ter > 0) {
+                      <span class="tag">TER {{ fmt.pct(p.ter, 2) }}</span>
+                    }
+                  </div>
+                </div>
+
+                <div class="datos-prod-metrics">
+                  <div class="datos-prod-val-block">
+                    <strong class="datos-prod-val mono valor-privado">
                       {{ fmt.eur(valorActualProducto(p.id), 2) }}
-                    </td>
-                    <td class="num celda-acciones">
-                      @if (esTipoInversion(p.tipo) && p.fuente !== 'manual') {
-                        <button
-                          type="button"
-                          class="btn-tabla"
-                          (click)="abrirModalMovimiento(undefined, p.id)"
-                          title="Anotar compra o venta"
-                        >
-                          + Compra
-                        </button>
-                      } @else {
-                        <button
-                          type="button"
-                          class="btn-tabla"
-                          (click)="abrirModalValoracion(undefined, p.id)"
-                          title="Anotar saldo o valoración"
-                        >
-                          + Saldo
-                        </button>
-                      }
-                      <button type="button" class="btn-tabla" (click)="abrirModalProducto(p)">
-                        Editar
+                    </strong>
+                    @if (
+                      esProductoCotizado(p) &&
+                      calc?.plusvalia !== null &&
+                      calc?.plusvalia !== undefined
+                    ) {
+                      <span
+                        class="datos-prod-pnl mono valor-privado"
+                        [class.pos]="(calc!.plusvalia ?? 0) >= 0"
+                        [class.neg]="(calc!.plusvalia ?? 0) < 0"
+                      >
+                        {{ fmt.eurSigno(calc!.plusvalia, 0) }}
+                        @if (calc!.rentabilidad !== null && calc!.rentabilidad !== undefined) {
+                          ({{ fmt.pctSigno(calc!.rentabilidad, 1) }})
+                        }
+                      </span>
+                    } @else {
+                      <span class="datos-prod-subcount">
+                        {{
+                          esProductoCotizado(p)
+                            ? numMovimientos(p.id) + ' operac.'
+                            : numValoraciones(p.id) + ' saldos'
+                        }}
+                      </span>
+                    }
+                  </div>
+
+                  <div class="datos-prod-actions">
+                    @if (esProductoCotizado(p)) {
+                      <button
+                        type="button"
+                        class="btn-tabla btn-tabla-primario"
+                        (click)="abrirModalMovimiento(undefined, p.id)"
+                        title="Anotar compra, venta o dividendo"
+                      >
+                        + Compra
                       </button>
                       <button
                         type="button"
-                        class="btn-tabla btn-tabla-peligro"
-                        (click)="confirmarBorrarProducto(p)"
+                        class="btn-tabla"
+                        (click)="verMovimientosDeProducto(p.id)"
+                        title="Ver operaciones de este producto"
                       >
-                        Borrar
+                        Movs ({{ numMovimientos(p.id) }})
                       </button>
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="6" class="vacio-celda">
-                      Aún no has añadido ningún producto. Pulsa «+ Añadir producto» para empezar.
-                    </td>
-                  </tr>
+                    } @else {
+                      <button
+                        type="button"
+                        class="btn-tabla btn-tabla-primario"
+                        (click)="abrirModalValoracion(undefined, p.id)"
+                        title="Anotar saldo o valoración"
+                      >
+                        + Saldo
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-tabla"
+                        (click)="verSaldosDeProducto(p.id)"
+                        title="Ver saldos de este producto"
+                      >
+                        Saldos ({{ numValoraciones(p.id) }})
+                      </button>
+                    }
+                    <button
+                      type="button"
+                      class="btn-tabla"
+                      (click)="abrirModalProducto(p)"
+                      title="Editar configuración del producto"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" />
+                      </svg>
+                      <span>Editar</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="btn-tabla btn-tabla-peligro"
+                      (click)="confirmarBorrarProducto(p)"
+                      title="Eliminar producto"
+                      aria-label="Eliminar producto"
+                    >
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        aria-hidden="true"
+                      >
+                        <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              </article>
+            } @empty {
+              <div class="datos-empty-box">
+                @if (!c.productos.length) {
+                  <p>
+                    Aún no has añadido ningún producto. Pulsa «Añadir producto» para configurar tu
+                    primer activo, cuenta o inmueble.
+                  </p>
+                  <button type="button" class="btn-primario" (click)="abrirModalProducto()">
+                    + Añadir mi primer producto
+                  </button>
+                } @else {
+                  <p>No hay productos que coincidan con el filtro aplicado.</p>
+                  <button
+                    type="button"
+                    class="btn-secundario btn-sm"
+                    (click)="filtroProdTexto.set(''); filtroProdModo.set('todos')"
+                  >
+                    Restablecer filtros
+                  </button>
                 }
-              </tbody>
-            </table>
+              </div>
+            }
           </div>
         </section>
       }
@@ -294,20 +502,131 @@ interface ArchivoLeido {
                 fiscal FIFO español.
               </p>
             </div>
-            <div class="controles-tabla">
-              <select
-                class="input-select"
-                [ngModel]="filtroMovProd()"
-                (ngModelChange)="filtroMovProd.set($event)"
-                aria-label="Filtrar movimientos por producto"
-              >
-                <option value="todos">Todos los productos</option>
-                @for (p of c.productos; track p.id) {
-                  <option [value]="p.id">{{ p.nombre }}</option>
-                }
-              </select>
+            <div class="header-btns">
               <button type="button" class="btn-primario" (click)="abrirModalMovimiento()">
-                + Anotar operación
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                <span>Anotar operación</span>
+              </button>
+            </div>
+          </div>
+
+          <div class="datos-kpi-strip">
+            <div class="datos-kpi">
+              <span>Operaciones mostradas</span>
+              <strong class="mono">{{ movimientosResumen().total }}</strong>
+            </div>
+            <div class="datos-kpi">
+              <span>Total comprado</span>
+              <strong class="mono valor-privado">{{
+                fmt.eur(movimientosResumen().comprado, 2)
+              }}</strong>
+            </div>
+            <div class="datos-kpi">
+              <span>Total vendido</span>
+              <strong class="mono valor-privado">{{
+                fmt.eur(movimientosResumen().vendido, 2)
+              }}</strong>
+            </div>
+            <div class="datos-kpi">
+              <span>Dividendos</span>
+              <strong class="mono pos valor-privado">{{
+                fmt.eur(movimientosResumen().dividendos, 2)
+              }}</strong>
+            </div>
+          </div>
+
+          <div class="datos-toolbar">
+            <div class="datos-search-wrap">
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                aria-hidden="true"
+              >
+                <circle cx="11" cy="11" r="7" />
+                <path d="m20 20-3.5-3.5" />
+              </svg>
+              <input
+                type="text"
+                [ngModel]="filtroMovTexto()"
+                (ngModelChange)="filtroMovTexto.set($event)"
+                placeholder="Buscar por producto o nota…"
+                aria-label="Buscar operaciones"
+              />
+              @if (filtroMovTexto()) {
+                <button
+                  type="button"
+                  class="pm-search-clear"
+                  (click)="filtroMovTexto.set('')"
+                  aria-label="Limpiar búsqueda"
+                >
+                  ✕
+                </button>
+              }
+            </div>
+
+            <select
+              class="input-select"
+              [ngModel]="filtroMovProd()"
+              (ngModelChange)="filtroMovProd.set($event)"
+              aria-label="Filtrar movimientos por producto"
+            >
+              <option value="todos">Todos los productos</option>
+              @for (p of c.productos; track p.id) {
+                <option [value]="p.id">{{ p.nombre }}</option>
+              }
+            </select>
+
+            <div class="seg-group" role="group" aria-label="Filtrar por tipo de operación">
+              <button
+                type="button"
+                class="seg-btn"
+                [class.on]="filtroMovTipo() === 'todos'"
+                (click)="filtroMovTipo.set('todos')"
+              >
+                Todas
+              </button>
+              <button
+                type="button"
+                class="seg-btn"
+                [class.on]="filtroMovTipo() === 'compra'"
+                (click)="filtroMovTipo.set('compra')"
+              >
+                Compras
+              </button>
+              <button
+                type="button"
+                class="seg-btn"
+                [class.on]="filtroMovTipo() === 'venta'"
+                (click)="filtroMovTipo.set('venta')"
+              >
+                Ventas
+              </button>
+              <button
+                type="button"
+                class="seg-btn"
+                [class.on]="filtroMovTipo() === 'dividendo'"
+                (click)="filtroMovTipo.set('dividendo')"
+              >
+                Dividendos
+              </button>
+              <button
+                type="button"
+                class="seg-btn"
+                [class.on]="filtroMovTipo() === 'comision'"
+                (click)="filtroMovTipo.set('comision')"
+              >
+                Comisiones
               </button>
             </div>
           </div>
@@ -319,7 +638,8 @@ interface ArchivoLeido {
                   <th>Fecha</th>
                   <th>Producto</th>
                   <th>Operación</th>
-                  <th class="num">Unidades / Part.</th>
+                  <th class="num">Unidades</th>
+                  <th class="num">Precio unit.</th>
                   <th class="num">Importe</th>
                   <th>Nota</th>
                   <th class="num">Acciones</th>
@@ -329,33 +649,73 @@ interface ArchivoLeido {
                 @for (m of movimientosFiltrados(); track m.id) {
                   <tr>
                     <td class="mono">{{ fmt.fechaCorta(m.fecha) }}</td>
-                    <td>{{ nombreProducto(m.producto) }}</td>
                     <td>
-                      <span class="tag" [class]="'tag-mov-' + m.tipo">{{
+                      <div class="celda-prod-nombre">
+                        <span class="dot" [style.background]="colorProducto(m.producto)"></span>
+                        <span>{{ nombreProducto(m.producto) }}</span>
+                      </div>
+                    </td>
+                    <td>
+                      <span [class]="'tag tag-mov-' + m.tipo">{{
                         m.tipo.toUpperCase()
                       }}</span>
                     </td>
                     <td class="num mono">
                       {{ m.unidades ? fmt.num(m.unidades, 4) : '—' }}
                     </td>
-                    <td class="num mono valor-privado">{{ fmt.eur(m.importe, 2) }}</td>
+                    <td class="num mono muted valor-privado">
+                      {{ m.unidades && m.unidades > 0 ? fmt.eur(m.importe / m.unidades, 2) : '—' }}
+                    </td>
+                    <td class="num mono valor-privado">
+                      <strong>{{ fmt.eur(m.importe, 2) }}</strong>
+                      @if (m.comision) {
+                        <small class="muted" style="display: block; font-size: 0.7rem">
+                          com. {{ fmt.eur(m.comision, 2) }}
+                        </small>
+                      }
+                    </td>
                     <td class="muted">{{ m.nota || '—' }}</td>
                     <td class="num celda-acciones">
-                      <button type="button" class="btn-tabla" (click)="abrirModalMovimiento(m)">
+                      <button
+                        type="button"
+                        class="btn-tabla"
+                        (click)="duplicarMovimiento(m)"
+                        title="Repetir operación con fecha de hoy"
+                      >
+                        Repetir
+                      </button>
+                      <button
+                        type="button"
+                        class="btn-tabla"
+                        (click)="abrirModalMovimiento(m)"
+                        title="Editar operación"
+                      >
                         Editar
                       </button>
                       <button
                         type="button"
                         class="btn-tabla btn-tabla-peligro"
                         (click)="confirmarBorrarMovimiento(m)"
+                        title="Eliminar operación"
+                        aria-label="Eliminar operación"
                       >
-                        Borrar
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+                        </svg>
                       </button>
                     </td>
                   </tr>
                 } @empty {
                   <tr>
-                    <td colspan="7" class="vacio-celda">No hay operaciones registradas.</td>
+                    <td colspan="8" class="vacio-celda">
+                      No hay operaciones que coincidan con el filtro actual.
+                    </td>
                   </tr>
                 }
               </tbody>
@@ -384,9 +744,34 @@ interface ArchivoLeido {
                 Anotar todos de una vez
               </button>
               <button type="button" class="btn-primario" (click)="abrirModalValoracion()">
-                + Anotar saldo puntual
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2.2"
+                  stroke-linecap="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+                <span>Anotar saldo puntual</span>
               </button>
             </div>
+          </div>
+
+          <div class="datos-toolbar">
+            <select
+              class="input-select"
+              [ngModel]="filtroValProd()"
+              (ngModelChange)="filtroValProd.set($event)"
+              aria-label="Filtrar saldos por producto"
+            >
+              <option value="todos">Todos los activos y cuentas</option>
+              @for (p of c.productos; track p.id) {
+                <option [value]="p.id">{{ p.nombre }}</option>
+              }
+            </select>
+            <span class="tag mono">{{ valoracionesFiltradas().length }} registros</span>
           </div>
 
           <div class="tabla-scroll">
@@ -401,10 +786,15 @@ interface ArchivoLeido {
                 </tr>
               </thead>
               <tbody>
-                @for (v of valoracionesOrdenadas(); track v.id) {
+                @for (v of valoracionesFiltradas(); track v.id) {
                   <tr>
                     <td class="mono">{{ fmt.fechaCorta(v.fecha) }}</td>
-                    <td>{{ nombreProducto(v.producto) }}</td>
+                    <td>
+                      <div class="celda-prod-nombre">
+                        <span class="dot" [style.background]="colorProducto(v.producto)"></span>
+                        <span>{{ nombreProducto(v.producto) }}</span>
+                      </div>
+                    </td>
                     <td class="num mono valor-privado">{{ fmt.eur(v.valor, 2) }}</td>
                     <td class="num mono valor-privado">
                       {{
@@ -421,8 +811,18 @@ interface ArchivoLeido {
                         type="button"
                         class="btn-tabla btn-tabla-peligro"
                         (click)="confirmarBorrarValoracion(v)"
+                        title="Eliminar saldo"
+                        aria-label="Eliminar saldo"
                       >
-                        Borrar
+                        <svg
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="2"
+                          aria-hidden="true"
+                        >
+                          <path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14" />
+                        </svg>
                       </button>
                     </td>
                   </tr>
@@ -651,9 +1051,9 @@ interface ArchivoLeido {
                         <td class="mono">{{ f.fila }}</td>
                         <td>
                           <span
-                            class="tag"
                             [class]="
-                              f.estado === 'nuevo' ? 'pos' : f.estado === 'error' ? 'neg' : ''
+                              'tag ' +
+                              (f.estado === 'nuevo' ? 'pos' : f.estado === 'error' ? 'neg' : '')
                             "
                           >
                             {{ f.estado }}
@@ -785,10 +1185,12 @@ interface ArchivoLeido {
         [abierto]="modalProductoAbierto()"
         [productoEditar]="prodEditando()"
         (cerrar)="modalProductoAbierto.set(false)"
+        (creadoYAbrir)="onProductoCreadoYAbrir($event)"
       />
       <cap-movimiento-modal
         [abierto]="modalMovimientoAbierto()"
         [movimientoEditar]="movEditando()"
+        [movimientoDuplicar]="movDuplicando()"
         [productoPreseleccionado]="movProductoPreseleccionado()"
         (cerrar)="modalMovimientoAbierto.set(false)"
       />
@@ -810,7 +1212,13 @@ export class DatosTabComponent {
   readonly fmt = inject(FormatService);
 
   // Filters
+  readonly filtroProdTexto = signal<string>('');
+  readonly filtroProdModo = signal<'todos' | 'cotizado' | 'manual'>('todos');
   readonly filtroMovProd = signal<string>('todos');
+  readonly filtroMovTipo = signal<'todos' | 'compra' | 'venta' | 'dividendo' | 'comision'>('todos');
+  readonly filtroMovTexto = signal<string>('');
+  readonly filtroValProd = signal<string>('todos');
+  readonly logosFallidos = signal<Set<string>>(new Set());
 
   // Product modal state
   readonly modalProductoAbierto = signal<boolean>(false);
@@ -819,6 +1227,7 @@ export class DatosTabComponent {
   // Movement modal state
   readonly modalMovimientoAbierto = signal<boolean>(false);
   readonly movEditando = signal<MovimientoCfg | null>(null);
+  readonly movDuplicando = signal<MovimientoCfg | null>(null);
   readonly movProductoPreseleccionado = signal<string | undefined>(undefined);
 
   // Balance modal state
@@ -843,7 +1252,96 @@ export class DatosTabComponent {
   // Web export option
   ocultarImportesWeb = false;
 
+  private readonly mapaLogosBancos = computed<Map<string, string>>(() => {
+    const m = new Map<string, string>();
+    for (const b of [...this.store.bancosCatalogo(), ...this.store.bancosRecientes()]) {
+      if (b.nombre && b.logo && !m.has(b.nombre.toLowerCase())) {
+        m.set(b.nombre.toLowerCase(), b.logo);
+      }
+    }
+    return m;
+  });
+
+  readonly productosStats = computed(() => {
+    const prods = this.store.cartera()?.productos || [];
+    let cotizados = 0;
+    let manuales = 0;
+    let valorTotal = 0;
+    for (const p of prods) {
+      if (this.esProductoCotizado(p)) cotizados++;
+      else manuales++;
+      valorTotal += this.valorActualProducto(p.id);
+    }
+    return { total: prods.length, cotizados, manuales, valorTotal };
+  });
+
+  readonly productosFiltrados = computed<ProductoCfg[]>(() => {
+    const prods = this.store.cartera()?.productos || [];
+    const modo = this.filtroProdModo();
+    const q = this.filtroProdTexto().trim().toLowerCase();
+    return prods.filter((p) => {
+      const esCot = this.esProductoCotizado(p);
+      if (modo === 'cotizado' && !esCot) return false;
+      if (modo === 'manual' && esCot) return false;
+      if (!q) return true;
+      const texto = [
+        p.nombre,
+        p.corto,
+        p.identificador,
+        p.codigo,
+        p.entidad,
+        p.clase,
+        p.gestora,
+        this.etiquetaTipo(p.tipo),
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return texto.includes(q);
+    });
+  });
+
+  readonly movimientosFiltrados = computed<MovimientoCfg[]>(() => {
+    const movs = this.store.cartera()?.movimientos || [];
+    const filtroProd = this.filtroMovProd();
+    const filtroTipo = this.filtroMovTipo();
+    const q = this.filtroMovTexto().trim().toLowerCase();
+    return movs
+      .filter((m) => {
+        if (filtroProd !== 'todos' && m.producto !== filtroProd) return false;
+        if (filtroTipo !== 'todos' && m.tipo !== filtroTipo) return false;
+        if (!q) return true;
+        const texto = `${this.nombreProducto(m.producto)} ${m.nota || ''} ${m.tipo}`.toLowerCase();
+        return texto.includes(q);
+      })
+      .slice()
+      .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  });
+
+  readonly movimientosResumen = computed(() => {
+    let comprado = 0;
+    let vendido = 0;
+    let dividendos = 0;
+    const lista = this.movimientosFiltrados();
+    for (const m of lista) {
+      if (m.tipo === 'compra') comprado += m.importe || 0;
+      else if (m.tipo === 'venta') vendido += m.importe || 0;
+      else if (m.tipo === 'dividendo') dividendos += m.importe || 0;
+    }
+    return { total: lista.length, comprado, vendido, dividendos };
+  });
+
+  readonly valoracionesFiltradas = computed<ValoracionCfg[]>(() => {
+    const vals = this.store.cartera()?.valoraciones || [];
+    const filtro = this.filtroValProd();
+    return vals
+      .filter((v) => filtro === 'todos' || v.producto === filtro)
+      .slice()
+      .sort((a, b) => b.fecha.localeCompare(a.fecha));
+  });
+
   constructor() {
+    void this.store.cargarBancosIniciales();
     effect(() => {
       if (this.store.subTabDatos() === 'copias') {
         this.store.cargarCopias();
@@ -861,7 +1359,28 @@ export class DatosTabComponent {
   }
 
   esTipoInversion(tipo: string): boolean {
-    return ['fondo', 'etf', 'accion', 'cripto'].includes(tipo);
+    return ['fondo', 'etf', 'accion', 'cripto', 'commodity'].includes(tipo);
+  }
+
+  esProductoCotizado(p: ProductoCfg): boolean {
+    return this.esTipoInversion(p.tipo) && p.fuente !== 'manual';
+  }
+
+  logoEntidad(entidad?: string): string | null {
+    const clave = (entidad || '').trim().toLowerCase();
+    if (!clave) return null;
+    const url = this.mapaLogosBancos().get(clave);
+    if (!url || this.logosFallidos().has(url)) return null;
+    return url;
+  }
+
+  marcarLogoFallido(url: string): void {
+    this.logosFallidos.update((prev) => {
+      if (prev.has(url)) return prev;
+      const next = new Set(prev);
+      next.add(url);
+      return next;
+    });
   }
 
   nombreProducto(id: string): string {
@@ -869,30 +1388,48 @@ export class DatosTabComponent {
     return prod ? prod.nombre : id;
   }
 
+  infoCalculadaProducto(id: string): ProductoCalculado | undefined {
+    return this.store.todosComponentes().find((c) => c.id === id);
+  }
+
   valorActualProducto(id: string): number {
-    const comp = this.store.todosComponentes().find((c) => c.id === id);
+    const comp = this.infoCalculadaProducto(id);
     return comp ? comp.valor : 0;
+  }
+
+  numMovimientos(id: string): number {
+    return (this.store.cartera()?.movimientos || []).filter((m) => m.producto === id).length;
+  }
+
+  numValoraciones(id: string): number {
+    return (this.store.cartera()?.valoraciones || []).filter((v) => v.producto === id).length;
   }
 
   // Mismo color que en Patrimonio y Productos (sale del panel calculado, no del slot a secas).
   colorProducto(id: string): string {
-    const color = this.store.todosComponentes().find((c) => c.id === id)?.color;
+    const color = this.infoCalculadaProducto(id)?.color;
     return Array.isArray(color) ? color[0] : this.fmt.colorDeSlot(1)[0];
   }
 
-  readonly movimientosFiltrados = computed<MovimientoCfg[]>(() => {
-    const movs = this.store.cartera()?.movimientos || [];
-    const filtro = this.filtroMovProd();
-    return movs
-      .filter((m) => filtro === 'todos' || m.producto === filtro)
-      .slice()
-      .sort((a, b) => b.fecha.localeCompare(a.fecha));
-  });
+  verMovimientosDeProducto(id: string): void {
+    this.filtroMovProd.set(id);
+    this.filtroMovTipo.set('todos');
+    this.filtroMovTexto.set('');
+    this.store.subTabDatos.set('movimientos');
+  }
 
-  readonly valoracionesOrdenadas = computed<ValoracionCfg[]>(() => {
-    const vals = this.store.cartera()?.valoraciones || [];
-    return vals.slice().sort((a, b) => b.fecha.localeCompare(a.fecha));
-  });
+  verSaldosDeProducto(id: string): void {
+    this.filtroValProd.set(id);
+    this.store.subTabDatos.set('saldos');
+  }
+
+  onProductoCreadoYAbrir(ev: { id: string; accion: 'movimiento' | 'saldo' }): void {
+    if (ev.accion === 'movimiento') {
+      this.abrirModalMovimiento(undefined, ev.id);
+    } else {
+      this.abrirModalValoracion(undefined, ev.id);
+    }
+  }
 
   // Product modal logic
   abrirModalProducto(p?: ProductoCfg): void {
@@ -913,10 +1450,19 @@ export class DatosTabComponent {
   }
 
   // Movement modal logic
-  abrirModalMovimiento(m?: MovimientoCfg, productoPreseleccionado?: string): void {
+  abrirModalMovimiento(
+    m?: MovimientoCfg,
+    productoPreseleccionado?: string,
+    duplicar?: MovimientoCfg,
+  ): void {
     this.movEditando.set(m ?? null);
+    this.movDuplicando.set(duplicar ?? null);
     this.movProductoPreseleccionado.set(productoPreseleccionado);
     this.modalMovimientoAbierto.set(true);
+  }
+
+  duplicarMovimiento(m: MovimientoCfg): void {
+    this.abrirModalMovimiento(undefined, undefined, m);
   }
 
   confirmarBorrarMovimiento(m: MovimientoCfg): void {

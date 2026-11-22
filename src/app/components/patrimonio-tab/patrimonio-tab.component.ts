@@ -85,7 +85,11 @@ interface FilaAportacionTabla {
 
             <div class="hero-badges">
               @if (metricasActivas().plusvalia !== null) {
-                <span class="chip-rent" [class]="fmt.claseSigno(plusvaliaMostrada())">
+                <span
+                  class="chip-rent"
+                  [class.pos]="fmt.claseSigno(plusvaliaMostrada()) === 'pos'"
+                  [class.neg]="fmt.claseSigno(plusvaliaMostrada()) === 'neg'"
+                >
                   {{ fmt.eurSigno(plusvaliaMostrada(), 0) }}
                   @if (rentabilidadMostrada() !== null) {
                     ({{ fmt.pctSigno(rentabilidadMostrada(), 2) }})
@@ -224,7 +228,11 @@ interface FilaAportacionTabla {
 
           <article class="kpi-card">
             <span class="kpi-label">Ganancia o pérdida</span>
-            <div class="kpi-val valor-privado" [class]="fmt.claseSigno(plusvaliaMostrada())">
+            <div
+              class="kpi-val valor-privado"
+              [class.pos]="fmt.claseSigno(plusvaliaMostrada()) === 'pos'"
+              [class.neg]="fmt.claseSigno(plusvaliaMostrada()) === 'neg'"
+            >
               {{ plusvaliaMostrada() !== null ? fmt.eurSigno(plusvaliaMostrada(), 0) : '—' }}
             </div>
             <span class="kpi-sub valor-privado">
@@ -238,7 +246,11 @@ interface FilaAportacionTabla {
 
           <article class="kpi-card">
             <span class="kpi-label">Rentabilidad total</span>
-            <div class="kpi-val" [class]="fmt.claseSigno(rentabilidadMostrada())">
+            <div
+              class="kpi-val"
+              [class.pos]="fmt.claseSigno(rentabilidadMostrada()) === 'pos'"
+              [class.neg]="fmt.claseSigno(rentabilidadMostrada()) === 'neg'"
+            >
               {{ rentabilidadMostrada() !== null ? fmt.pctSigno(rentabilidadMostrada(), 2) : '—' }}
             </div>
             <span class="kpi-sub">Sobre el capital invertido</span>
@@ -246,7 +258,11 @@ interface FilaAportacionTabla {
 
           <article class="kpi-card">
             <span class="kpi-label">Rentabilidad anual (TIR)</span>
-            <div class="kpi-val" [class]="fmt.claseSigno(metricasActivas().tir)">
+            <div
+              class="kpi-val"
+              [class.pos]="fmt.claseSigno(metricasActivas().tir) === 'pos'"
+              [class.neg]="fmt.claseSigno(metricasActivas().tir) === 'neg'"
+            >
               {{ metricasActivas().tir !== null ? fmt.pctSigno(metricasActivas().tir, 2) : '—' }}
             </div>
             <span class="kpi-sub">Anualizada ponderada por fechas</span>
@@ -268,7 +284,7 @@ interface FilaAportacionTabla {
 
           <article class="kpi-card">
             <span class="kpi-label">Mayor caída (Max DD)</span>
-            <div class="kpi-val" [class]="metricasActivas().caida < 0 ? 'neg' : ''">
+            <div class="kpi-val" [class.neg]="metricasActivas().caida < 0">
               {{ fmt.pct(metricasActivas().caida, 1) }}
             </div>
             <span class="kpi-sub">
@@ -324,6 +340,9 @@ interface FilaAportacionTabla {
                 Haz clic en cualquier fondo, ETF o acción para inspeccionar su ficha técnica, compras y exposición.
               </p>
             </div>
+            <button type="button" class="btn-secundario btn-sm" (click)="irAGestionDatos()">
+              + Anotar operación
+            </button>
           </div>
 
           <div class="productos-grid">
@@ -342,7 +361,16 @@ interface FilaAportacionTabla {
                       <div class="prod-tags">
                         <span class="tag">{{ c.tipo }}</span>
                         @if (c.entidad) {
-                          <span class="tag">{{ c.entidad }}</span>
+                          <span class="tag prod-bank-tag">
+                            @if (logoEntidad(c.entidad); as logoUrl) {
+                              <img
+                                [src]="logoUrl"
+                                alt=""
+                                (error)="marcarLogoFallido(logoUrl)"
+                              />
+                            }
+                            {{ c.entidad }}
+                          </span>
                         }
                         @if (c.ter) {
                           <span class="tag">TER {{ fmt.pct(c.ter, 2) }}</span>
@@ -380,23 +408,42 @@ interface FilaAportacionTabla {
                   </div>
                   <div>
                     <span class="pm-etq">Ganancia</span>
-                    <strong class="pm-val valor-privado" [class]="fmt.claseSigno(c.plusvalia)">
+                    <strong
+                      class="pm-val valor-privado"
+                      [class.pos]="fmt.claseSigno(c.plusvalia) === 'pos'"
+                      [class.neg]="fmt.claseSigno(c.plusvalia) === 'neg'"
+                    >
                       {{ c.plusvalia !== null && c.plusvalia !== undefined ? fmt.eurSigno(c.plusvalia, 0) : '—' }}
                     </strong>
                   </div>
                   <div>
                     <span class="pm-etq">Rentab.</span>
-                    <strong class="pm-val" [class]="fmt.claseSigno(c.rentabilidad)">
+                    <strong
+                      class="pm-val"
+                      [class.pos]="fmt.claseSigno(c.rentabilidad) === 'pos'"
+                      [class.neg]="fmt.claseSigno(c.rentabilidad) === 'neg'"
+                    >
                       {{ c.rentabilidad !== null && c.rentabilidad !== undefined ? fmt.pctSigno(c.rentabilidad, 1) : '—' }}
                     </strong>
                   </div>
                   <div>
                     <span class="pm-etq">TIR</span>
-                    <strong class="pm-val" [class]="fmt.claseSigno(c.tir)">
+                    <strong
+                      class="pm-val"
+                      [class.pos]="fmt.claseSigno(c.tir) === 'pos'"
+                      [class.neg]="fmt.claseSigno(c.tir) === 'neg'"
+                    >
                       {{ c.tir !== null && c.tir !== undefined ? fmt.pctSigno(c.tir, 1) : '—' }}
                     </strong>
                   </div>
                 </div>
+
+                @if (esProductoInversion(c.id)) {
+                  <div class="prod-card-hint">
+                    <span>Ver ficha técnica</span>
+                    <span class="prod-card-arrow" aria-hidden="true">→</span>
+                  </div>
+                }
               </article>
             }
           </div>
@@ -644,7 +691,7 @@ interface FilaAportacionTabla {
                     <td class="num mono valor-privado">
                       {{ f.precio ? fmt.eur(f.precio, 2) : '—' }}
                     </td>
-                    <td class="num mono valor-privado" [class]="f.esPasivo ? 'pos' : ''">
+                    <td class="num mono valor-privado" [class.pos]="f.esPasivo">
                       {{ fmt.eur(f.importe, 2) }}
                     </td>
                   </tr>
@@ -720,8 +767,23 @@ export class PatrimonioTabComponent {
   readonly ordenTabla = signal<'fecha' | 'importe'>('fecha');
   readonly limiteFilas = signal<number>(30);
 
+  readonly logosFallidos = signal<Set<string>>(new Set());
+
+  readonly logosBancos = computed<Map<string, string>>(() => {
+    const mapa = new Map<string, string>();
+    for (const lista of [this.store.bancosCatalogo(), this.store.bancosRecientes()]) {
+      for (const b of lista) {
+        if (b.logo) {
+          mapa.set(b.nombre.trim().toLowerCase(), b.logo);
+        }
+      }
+    }
+    return mapa;
+  });
+
   // Goal modal fields
   constructor() {
+    void this.store.cargarBancosIniciales();
     effect(() => {
       const d = this.store.datos();
       if (d?.total && !this.proyInicializado && !this.store.carteraVacia()) {
@@ -730,6 +792,26 @@ export class PatrimonioTabComponent {
         this.proyAport.set(Math.min(4000, Math.max(0, ritmoRedondeado)));
       }
     });
+  }
+
+  logoEntidad(entidad?: string | null): string | null {
+    const clave = (entidad || '').trim().toLowerCase();
+    if (!clave) return null;
+    const url = this.logosBancos().get(clave) || null;
+    if (!url || this.logosFallidos().has(url)) return null;
+    return url;
+  }
+
+  marcarLogoFallido(url: string): void {
+    this.logosFallidos.update((prev) => {
+      const next = new Set(prev);
+      next.add(url);
+      return next;
+    });
+  }
+
+  esProductoInversion(id: string): boolean {
+    return Boolean(this.store.datos()?.productos?.some((p) => p.id === id));
   }
 
   readonly metricasActivas = computed(() => {
@@ -1151,6 +1233,12 @@ export class PatrimonioTabComponent {
 
   irAImportar(): void {
     this.store.subTabDatos.set('importar');
+    this.store.tabActiva.set('datos');
+    void this.router.navigate(['/datos']);
+  }
+
+  irAGestionDatos(): void {
+    this.store.subTabDatos.set('movimientos');
     this.store.tabActiva.set('datos');
     void this.router.navigate(['/datos']);
   }

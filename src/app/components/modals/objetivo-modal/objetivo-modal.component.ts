@@ -1,4 +1,4 @@
-import { Component, effect, inject } from '@angular/core';
+import { Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 
@@ -72,7 +72,14 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
 
             <div class="modal-footer">
               <button type="button" class="btn-fantasma" (click)="cerrar()">Cancelar</button>
-              <button type="submit" class="btn-primario">Guardar objetivo</button>
+              <button type="submit" class="btn-primario" [disabled]="guardando()">
+                @if (guardando()) {
+                  <span class="girando" aria-hidden="true">↻</span>
+                  <span>Guardando…</span>
+                } @else {
+                  <span>Guardar objetivo</span>
+                }
+              </button>
             </div>
           </form>
         </div>
@@ -82,6 +89,7 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
 })
 export class ObjetivoModalComponent {
   readonly store = inject(PortfolioStoreService);
+  readonly guardando = signal(false);
 
   objTitular = '';
   objEtiqueta = '';
@@ -91,6 +99,7 @@ export class ObjetivoModalComponent {
   constructor() {
     effect(() => {
       if (this.store.modalObjetivoAbierto()) {
+        this.guardando.set(false);
         const d = this.store.datos();
         const obj = d?.objetivo;
         this.objTitular = d?.titular || 'Mi cartera';
@@ -106,14 +115,20 @@ export class ObjetivoModalComponent {
   }
 
   async guardar(): Promise<void> {
-    const ok = await this.store.guardarObjetivo(
-      this.objTitular.trim() || 'Mi cartera',
-      Number(this.objImporte) || 100000,
-      this.objEtiqueta.trim() || 'Objetivo de patrimonio',
-      this.objActivo,
-    );
-    if (ok) {
-      this.cerrar();
+    if (this.guardando()) return;
+    this.guardando.set(true);
+    try {
+      const ok = await this.store.guardarObjetivo(
+        this.objTitular.trim() || 'Mi cartera',
+        Number(this.objImporte) || 100000,
+        this.objEtiqueta.trim() || 'Objetivo de patrimonio',
+        this.objActivo,
+      );
+      if (ok) {
+        this.cerrar();
+      }
+    } finally {
+      this.guardando.set(false);
     }
   }
 }

@@ -81,7 +81,7 @@ import { BancoSelectorComponent } from './banco-selector.component';
                   <div class="pm-linked-card">
                     <div class="pm-linked-main">
                       <div class="pm-linked-badges">
-                        <span class="pm-type-badge" [class]="claseBadgeTipo(sel.tipo)">
+                        <span [class]="claseBadgeTipo(sel.tipo)">
                           {{ etiquetaTipo(sel.tipo) }}
                         </span>
                         <span class="tag mono">{{ sel.identificador }}</span>
@@ -201,7 +201,7 @@ import { BancoSelectorComponent } from './banco-selector.component';
                         >
                           <div class="pm-result-main">
                             <div class="pm-result-title-row">
-                              <span class="pm-type-badge" [class]="claseBadgeTipo(r.tipo)">
+                              <span [class]="claseBadgeTipo(r.tipo)">
                                 {{ etiquetaTipo(r.tipo) }}
                               </span>
                               <strong class="pm-result-name">{{ r.nombre }}</strong>
@@ -492,6 +492,20 @@ import { BancoSelectorComponent } from './banco-selector.component';
 
           <div class="modal-footer pm-footer">
             <button type="button" class="btn-fantasma" (click)="cerrar.emit()">Cancelar</button>
+            @if (!productoEditar()) {
+              <button
+                type="button"
+                class="btn-secundario"
+                [disabled]="guardando() || !formProd.nombre?.trim()"
+                (click)="guardarYAbrir()"
+              >
+                {{
+                  modoModalProd() === 'cotizado'
+                    ? 'Crear y anotar compra'
+                    : 'Crear y anotar saldo'
+                }}
+              </button>
+            }
             <button
               type="submit"
               form="form-producto"
@@ -518,6 +532,7 @@ export class ProductoModalComponent {
   readonly abierto = input.required<boolean>();
   readonly productoEditar = input<ProductoCfg | null>(null);
   readonly cerrar = output<void>();
+  readonly creadoYAbrir = output<{ id: string; accion: 'movimiento' | 'saldo' }>();
 
   readonly modoModalProd = signal<'cotizado' | 'manual'>('cotizado');
   readonly mostrarAvanzadoProd = signal<boolean>(false);
@@ -594,7 +609,7 @@ export class ProductoModalComponent {
   }
 
   claseBadgeTipo(tipo: string): string {
-    return `pm-type-${tipo || 'otro'}`;
+    return `pm-type-badge pm-type-${tipo || 'otro'}`;
   }
 
   private esTipoInversion(tipo: string): boolean {
@@ -767,12 +782,20 @@ export class ProductoModalComponent {
   }
 
   async guardar(): Promise<void> {
+    await this.ejecutarGuardado(false);
+  }
+
+  async guardarYAbrir(): Promise<void> {
+    await this.ejecutarGuardado(true);
+  }
+
+  private async ejecutarGuardado(abrirDespues: boolean): Promise<void> {
     if (this.guardando() || !this.formProd.nombre?.trim()) return;
     this.guardando.set(true);
     try {
       const idExistente = this.productoEditar()?.id;
-      const ok = await this.store.guardarProducto(this.formProd, idExistente);
-      if (ok) {
+      const item = await this.store.guardarProducto(this.formProd, idExistente);
+      if (item) {
         if (this.formProd.entidad?.trim()) {
           const sel = this.bancoSeleccionado();
           void this.store.registrarUsoBanco(
@@ -782,6 +805,13 @@ export class ProductoModalComponent {
           );
         }
         this.cerrar.emit();
+        if (abrirDespues && item.id) {
+          const accion =
+            this.modoModalProd() === 'cotizado' && this.formProd.fuente !== 'manual'
+              ? 'movimiento'
+              : 'saldo';
+          this.creadoYAbrir.emit({ id: item.id, accion });
+        }
       }
     } finally {
       this.guardando.set(false);

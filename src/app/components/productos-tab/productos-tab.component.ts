@@ -73,7 +73,11 @@ import { ProductoCalculado } from '../../models/portfolio.model';
                 <div class="ficha-cifra valor-privado">{{ fmt.eur(store.valorProductoConVivo(p), 2) }}</div>
                 <div class="hero-badges">
                   @if (p.plusvalia !== null && p.plusvalia !== undefined) {
-                    <span class="chip-rent" [class]="fmt.claseSigno(p.plusvalia)">
+                    <span
+                      class="chip-rent"
+                      [class.pos]="fmt.claseSigno(p.plusvalia) === 'pos'"
+                      [class.neg]="fmt.claseSigno(p.plusvalia) === 'neg'"
+                    >
                       {{ fmt.eurSigno(p.plusvalia, 2) }}
                       @if (p.rentabilidad !== null && p.rentabilidad !== undefined) {
                         ({{ fmt.pctSigno(p.rentabilidad, 2) }})
@@ -131,11 +135,16 @@ import { ProductoCalculado } from '../../models/portfolio.model';
                 </span>
                 <div class="ventanas-grid">
                   @for (v of clavesVentanas; track v.clave) {
-                    <div class="ventana-celda">
+                    <div
+                      class="ventana-celda"
+                      [class.pos-tint]="(p.ventanas[v.clave] ?? 0) > 0.0001"
+                      [class.neg-tint]="(p.ventanas[v.clave] ?? 0) < -0.0001"
+                    >
                       <span class="ventana-etq">{{ v.etiqueta }}</span>
                       <strong
                         class="mono"
-                        [class]="fmt.claseSigno(p.ventanas[v.clave] ?? null)"
+                        [class.pos]="fmt.claseSigno(p.ventanas[v.clave] ?? null) === 'pos'"
+                        [class.neg]="fmt.claseSigno(p.ventanas[v.clave] ?? null) === 'neg'"
                       >
                         {{ p.ventanas[v.clave] !== null && p.ventanas[v.clave] !== undefined ? fmt.pctSigno(p.ventanas[v.clave]!, 2) : '—' }}
                       </strong>
@@ -265,7 +274,7 @@ import { ProductoCalculado } from '../../models/portfolio.model';
                     <tr>
                       <td class="mono">{{ fmt.fechaCorta(a.fecha) }}</td>
                       <td>
-                        <span class="tag" [class]="claseNivelAportacion(a.nivel)">
+                        <span class="tag" [class.tag-lp]="a.nivel === 3">
                           {{ etiquetaNivelAportacion(a.nivel) }}
                         </span>
                       </td>
@@ -423,10 +432,5 @@ export class ProductosTabComponent {
     if (nivel === 3) return 'Extraordinaria';
     if (nivel === 1) return 'Pequeña';
     return 'Habitual';
-  }
-
-  claseNivelAportacion(nivel?: number): string {
-    if (nivel === 3) return 'tag-lp';
-    return '';
   }
 }

@@ -1,8 +1,11 @@
-import { Component, inject } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 
 @Component({
   selector: 'cap-confirm-modal',
+  host: {
+    '(document:keydown.escape)': 'cerrarSiAbierto()',
+  },
   template: `
     @if (store.confirmacionActiva(); as conf) {
       <div class="modal-backdrop" (click)="store.cerrarConfirmacion()">
@@ -32,15 +35,26 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
           <div class="modal-body">
             <p class="modal-desc">{{ conf.mensaje }}</p>
             <div class="modal-footer">
-              <button type="button" class="btn-fantasma" (click)="store.cerrarConfirmacion()">
+              <button
+                type="button"
+                class="btn-fantasma"
+                [disabled]="ejecutando()"
+                (click)="store.cerrarConfirmacion()"
+              >
                 Cancelar
               </button>
               <button
                 type="button"
                 [class]="conf.peligro ? 'btn-peligro' : 'btn-primario'"
-                (click)="store.ejecutarConfirmacion()"
+                [disabled]="ejecutando()"
+                (click)="confirmar()"
               >
-                {{ conf.textoConfirmar }}
+                @if (ejecutando()) {
+                  <span class="girando" aria-hidden="true">↻</span>
+                  <span>Procesando…</span>
+                } @else {
+                  <span>{{ conf.textoConfirmar }}</span>
+                }
               </button>
             </div>
           </div>
@@ -51,4 +65,21 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
 })
 export class ConfirmModalComponent {
   readonly store = inject(PortfolioStoreService);
+  readonly ejecutando = signal(false);
+
+  cerrarSiAbierto(): void {
+    if (this.store.confirmacionActiva() && !this.ejecutando()) {
+      this.store.cerrarConfirmacion();
+    }
+  }
+
+  async confirmar(): Promise<void> {
+    if (this.ejecutando()) return;
+    this.ejecutando.set(true);
+    try {
+      await this.store.ejecutarConfirmacion();
+    } finally {
+      this.ejecutando.set(false);
+    }
+  }
 }

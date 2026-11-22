@@ -66,6 +66,7 @@ export class PortfolioStoreService {
   readonly tabActiva = signal<TabId>('patrimonio');
   readonly subTabDatos = signal<'productos' | 'movimientos' | 'saldos' | 'importar' | 'copias'>('productos');
   readonly tema = signal<'oscuro' | 'claro'>('oscuro');
+  readonly modoPrivado = signal<boolean>(false);
   readonly rango = signal<RangoId>('todo');
   readonly vistaEvolucion = signal<VistaEvolucionId>('apilado');
   readonly agrupacionDist = signal<AgrupacionDistId>('clase');
@@ -105,6 +106,7 @@ export class PortfolioStoreService {
       if (guardado === 'claro' || guardado === 'oscuro') {
         this.tema.set(guardado);
       }
+      this.modoPrivado.set(localStorage.getItem('capitalia-privado') === '1');
     } catch {
       // Ignore storage access errors
     }
@@ -114,6 +116,7 @@ export class PortfolioStoreService {
   aplicarAtributosDocumento(): void {
     if (typeof document === 'undefined') return;
     document.documentElement.setAttribute('data-theme', this.tema());
+    document.documentElement.setAttribute('data-privado', this.modoPrivado() ? '1' : '0');
   }
 
   alternarTema(): void {
@@ -121,6 +124,17 @@ export class PortfolioStoreService {
     this.tema.set(nuevo);
     try {
       localStorage.setItem('capitalia-tema', nuevo);
+    } catch {
+      // ignore
+    }
+    this.aplicarAtributosDocumento();
+  }
+
+  alternarPrivado(): void {
+    const nuevo = !this.modoPrivado();
+    this.modoPrivado.set(nuevo);
+    try {
+      localStorage.setItem('capitalia-privado', nuevo ? '1' : '0');
     } catch {
       // ignore
     }
@@ -1083,14 +1097,14 @@ export class PortfolioStoreService {
   async guardarProducto(
     prod: Partial<ProductoCfg>,
     idExistente?: string
-  ): Promise<boolean> {
+  ): Promise<ProductoCfg | null> {
     try {
       const obs = idExistente
-        ? this.http.put<{ ok: boolean; panel: DatosPanel }>(
+        ? this.http.put<{ ok: boolean; item?: ProductoCfg; panel: DatosPanel }>(
             `/api/productos/${encodeURIComponent(idExistente)}`,
             prod
           )
-        : this.http.post<{ ok: boolean; panel: DatosPanel }>(
+        : this.http.post<{ ok: boolean; item?: ProductoCfg; panel: DatosPanel }>(
             '/api/productos',
             prod
           );
@@ -1100,12 +1114,12 @@ export class PortfolioStoreService {
       this.notificarExito(
         idExistente ? 'Producto actualizado.' : 'Producto añadido a la cartera.'
       );
-      return true;
+      return resp.item ?? (prod as ProductoCfg);
     } catch (err: unknown) {
       this.notificarError(
         this.extraerMensajeError(err, 'Error al guardar el producto.')
       );
-      return false;
+      return null;
     }
   }
 

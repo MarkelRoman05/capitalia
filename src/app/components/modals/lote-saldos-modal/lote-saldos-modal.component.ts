@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, output } from '@angular/core';
+import { Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 
@@ -12,14 +12,14 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
     @if (abierto()) {
       <div class="modal-backdrop" (click)="cerrar.emit()">
         <div
-          class="modal-card modal-lg"
+          class="modal-card modal-lg pm-modal"
           (click)="$event.stopPropagation()"
           role="dialog"
           aria-modal="true"
           aria-labelledby="modal-lote-titulo"
         >
-          <div class="modal-header">
-            <div>
+          <div class="modal-header pm-header">
+            <div class="modal-title-group">
               <span class="modal-kicker">Actualización Masiva</span>
               <h3 id="modal-lote-titulo">Actualizar todos los saldos en una fecha</h3>
             </div>
@@ -27,58 +27,75 @@ import { PortfolioStoreService } from '../../../services/portfolio-store.service
               ✕
             </button>
           </div>
-          <form (ngSubmit)="guardar()" class="modal-body">
-            <div class="campo" style="max-width: 240px">
-              <label for="lote-fecha">Fecha de cierre</label>
-              <input
-                id="lote-fecha"
-                autofocus
-                type="date"
-                [(ngModel)]="loteFecha"
-                name="loteFecha"
-                required
-              />
-            </div>
 
-            <div class="tabla-scroll" style="margin-top: 1rem">
-              <table class="tabla-datos">
-                <thead>
-                  <tr>
-                    <th>Activo / Cuenta</th>
-                    <th>Tipo</th>
-                    <th class="num">Saldo o valor (€)</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  @for (item of loteItems; track item.producto) {
-                    <tr>
-                      <td>
-                        <strong>{{ item.nombre }}</strong>
-                      </td>
-                      <td>
-                        <span class="tag">{{ etiquetaTipo(item.tipo) }}</span>
-                      </td>
-                      <td class="num">
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          class="input-inline-num"
-                          [(ngModel)]="item.valor"
-                          [name]="'lote_' + item.producto"
-                        />
-                      </td>
-                    </tr>
-                  }
-                </tbody>
-              </table>
-            </div>
+          <div class="pm-body">
+            <form id="form-lote-saldos" (ngSubmit)="guardar()" class="pm-sections">
+              <section class="pm-section">
+                <div class="campo" style="max-width: 240px">
+                  <label for="lote-fecha">Fecha de cierre</label>
+                  <input
+                    id="lote-fecha"
+                    autofocus
+                    type="date"
+                    [(ngModel)]="loteFecha"
+                    name="loteFecha"
+                    required
+                  />
+                </div>
 
-            <div class="modal-footer">
-              <button type="button" class="btn-fantasma" (click)="cerrar.emit()">Cancelar</button>
-              <button type="submit" class="btn-primario">Guardar todos los saldos</button>
-            </div>
-          </form>
+                <div class="tabla-scroll" style="margin-top: 0.75rem">
+                  <table class="tabla-datos">
+                    <thead>
+                      <tr>
+                        <th>Activo / Cuenta</th>
+                        <th>Tipo</th>
+                        <th class="num">Saldo o valor (€)</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      @for (item of loteItems; track item.producto) {
+                        <tr>
+                          <td>
+                            <strong>{{ item.nombre }}</strong>
+                          </td>
+                          <td>
+                            <span class="tag">{{ etiquetaTipo(item.tipo) }}</span>
+                          </td>
+                          <td class="num">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              class="input-inline-num"
+                              [(ngModel)]="item.valor"
+                              [name]="'lote_' + item.producto"
+                            />
+                          </td>
+                        </tr>
+                      }
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </form>
+          </div>
+
+          <div class="modal-footer pm-footer">
+            <button type="button" class="btn-fantasma" (click)="cerrar.emit()">Cancelar</button>
+            <button
+              type="submit"
+              form="form-lote-saldos"
+              class="btn-primario"
+              [disabled]="guardando() || !loteFecha"
+            >
+              @if (guardando()) {
+                <span class="girando" aria-hidden="true">↻</span>
+                <span>Guardando…</span>
+              } @else {
+                <span>Guardar todos los saldos</span>
+              }
+            </button>
+          </div>
         </div>
       </div>
     }
@@ -90,15 +107,20 @@ export class LoteSaldosModalComponent {
   readonly abierto = input.required<boolean>();
   readonly cerrar = output<void>();
 
+  readonly guardando = signal(false);
+
   loteFecha = new Date().toISOString().slice(0, 10);
   loteItems: { producto: string; nombre: string; tipo: string; valor: number | null }[] = [];
 
   constructor() {
     effect(() => {
       if (this.abierto()) {
+        this.guardando.set(false);
         const prods = this.store.cartera()?.productos || [];
         const manuales = prods.filter(
-          (p) => !['fondo', 'etf', 'accion', 'cripto'].includes(p.tipo) || p.fuente === 'manual',
+          (p) =>
+            !['fondo', 'etf', 'accion', 'cripto', 'commodity'].includes(p.tipo) ||
+            p.fuente === 'manual',
         );
         const lista = manuales.length ? manuales : prods;
         this.loteFecha = new Date().toISOString().slice(0, 10);
@@ -125,18 +147,24 @@ export class LoteSaldosModalComponent {
   }
 
   async guardar(): Promise<void> {
-    const saldos = this.loteItems
-      .filter((it) => it.valor !== null && it.valor !== undefined)
-      .map((it) => ({
-        producto: it.producto,
-        valor: Number(it.valor),
-      }));
-    const ok = await this.store.guardarValoracion({
-      fecha: this.loteFecha,
-      saldos,
-    });
-    if (ok) {
-      this.cerrar.emit();
+    if (this.guardando()) return;
+    this.guardando.set(true);
+    try {
+      const saldos = this.loteItems
+        .filter((it) => it.valor !== null && it.valor !== undefined)
+        .map((it) => ({
+          producto: it.producto,
+          valor: Number(it.valor),
+        }));
+      const ok = await this.store.guardarValoracion({
+        fecha: this.loteFecha,
+        saldos,
+      });
+      if (ok) {
+        this.cerrar.emit();
+      }
+    } finally {
+      this.guardando.set(false);
     }
   }
 }

@@ -40,7 +40,11 @@ import { ReferenciaIndexado } from '../../models/portfolio.model';
                 <tr class="fila-destacada">
                   <td><strong>Total cartera de inversión</strong></td>
                   @for (val of d.rentabilidadAnual.cartera; track $index) {
-                    <td class="num mono" [class]="fmt.claseSigno(val)">
+                    <td
+                      class="num mono"
+                      [class.pos]="fmt.claseSigno(val) === 'pos'"
+                      [class.neg]="fmt.claseSigno(val) === 'neg'"
+                    >
                       <strong>{{ val !== null ? fmt.pctSigno(val, 2) : '—' }}</strong>
                     </td>
                   }
@@ -56,7 +60,11 @@ import { ReferenciaIndexado } from '../../models/portfolio.model';
                         {{ p.nombre }}
                       </td>
                       @for (val of fila; track $index; let j = $index) {
-                        <td class="num mono" [class]="fmt.claseSigno(val)">
+                        <td
+                          class="num mono"
+                          [class.pos]="fmt.claseSigno(val) === 'pos'"
+                          [class.neg]="fmt.claseSigno(val) === 'neg'"
+                        >
                           @if (val !== null && val !== undefined) {
                             <span>{{ fmt.pctSigno(val, 2) }}</span>
                             @if (d.rentabilidadAnual.desde?.[p.id]?.[j]; as fDesde) {
@@ -112,7 +120,10 @@ import { ReferenciaIndexado } from '../../models/portfolio.model';
                 <div class="kpi-val valor-privado">{{ fmt.eur(d.comparacion.tuValor, 0) }}</div>
                 <span class="kpi-sub">
                   TIR anual:
-                  <strong [class]="fmt.claseSigno(d.comparacion.tuTir)">
+                  <strong
+                    [class.pos]="fmt.claseSigno(d.comparacion.tuTir) === 'pos'"
+                    [class.neg]="fmt.claseSigno(d.comparacion.tuTir) === 'neg'"
+                  >
                     {{ d.comparacion.tuTir !== null ? fmt.pctSigno(d.comparacion.tuTir, 2) : '—' }}
                   </strong>
                 </span>
@@ -123,7 +134,10 @@ import { ReferenciaIndexado } from '../../models/portfolio.model';
                 <div class="kpi-val valor-privado">{{ fmt.eur(ref.valor, 0) }}</div>
                 <span class="kpi-sub">
                   {{ ref.detalle }} · TIR:
-                  <strong [class]="fmt.claseSigno(ref.tir)">
+                  <strong
+                    [class.pos]="fmt.claseSigno(ref.tir) === 'pos'"
+                    [class.neg]="fmt.claseSigno(ref.tir) === 'neg'"
+                  >
                     {{ ref.tir !== null ? fmt.pctSigno(ref.tir, 2) : '—' }}
                   </strong>
                 </span>
@@ -133,14 +147,18 @@ import { ReferenciaIndexado } from '../../models/portfolio.model';
                 <span class="kpi-label">Diferencia a tu favor</span>
                 <div
                   class="kpi-val valor-privado"
-                  [class]="fmt.claseSigno(d.comparacion.tuValor - ref.valor)"
+                  [class.pos]="fmt.claseSigno(d.comparacion.tuValor - ref.valor) === 'pos'"
+                  [class.neg]="fmt.claseSigno(d.comparacion.tuValor - ref.valor) === 'neg'"
                 >
                   {{ fmt.eurSigno(d.comparacion.tuValor - ref.valor, 0) }}
                 </div>
                 <span class="kpi-sub">
                   @if (d.comparacion.tuTir !== null && ref.tir !== null) {
                     Diferencial anual:
-                    <strong [class]="fmt.claseSigno(d.comparacion.tuTir - ref.tir)">
+                    <strong
+                      [class.pos]="fmt.claseSigno(d.comparacion.tuTir - ref.tir) === 'pos'"
+                      [class.neg]="fmt.claseSigno(d.comparacion.tuTir - ref.tir) === 'neg'"
+                    >
                       {{ fmt.pctSigno(d.comparacion.tuTir - ref.tir, 2) }}/año
                     </strong>
                   } @else {
@@ -195,10 +213,18 @@ import { ReferenciaIndexado } from '../../models/portfolio.model';
                               ></span>
                               <strong>{{ c.nombre }}</strong>
                             </td>
-                            <td class="num mono" [class]="fmt.claseSigno(c.metricas.rentTotal)">
+                            <td
+                              class="num mono"
+                              [class.pos]="fmt.claseSigno(c.metricas.rentTotal) === 'pos'"
+                              [class.neg]="fmt.claseSigno(c.metricas.rentTotal) === 'neg'"
+                            >
                               {{ fmt.pctSigno(c.metricas.rentTotal, 2) }}
                             </td>
-                            <td class="num mono" [class]="fmt.claseSigno(c.metricas.cagr)">
+                            <td
+                              class="num mono"
+                              [class.pos]="fmt.claseSigno(c.metricas.cagr) === 'pos'"
+                              [class.neg]="fmt.claseSigno(c.metricas.cagr) === 'neg'"
+                            >
                               {{ c.metricas.cagr !== null ? fmt.pctSigno(c.metricas.cagr, 2) : '—' }}
                             </td>
                             <td class="num mono">

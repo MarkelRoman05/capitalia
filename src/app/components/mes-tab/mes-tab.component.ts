@@ -70,13 +70,21 @@ interface FilaDetalleMes {
           <div class="mes-hero-grid">
             <div class="mes-resumen-principal">
               <span class="kpi-label">Variación patrimonial del mes</span>
-              <div class="mes-cifra valor-privado" [class]="fmt.claseSigno(cambioTotal())">
+              <div
+                class="mes-cifra valor-privado"
+                [class.pos]="fmt.claseSigno(cambioTotal()) === 'pos'"
+                [class.neg]="fmt.claseSigno(cambioTotal()) === 'neg'"
+              >
                 {{ fmt.eurSigno(cambioTotal(), 2) }}
               </div>
               <div class="mes-sub valor-privado">
                 <span>De {{ fmt.eur(m.inicio, 0) }} a {{ fmt.eur(m.fin, 0) }}</span>
                 @if (cambioPct() !== null) {
-                  <span class="chip-rent" [class]="fmt.claseSigno(cambioPct())">
+                  <span
+                    class="chip-rent"
+                    [class.pos]="fmt.claseSigno(cambioPct()) === 'pos'"
+                    [class.neg]="fmt.claseSigno(cambioPct()) === 'neg'"
+                  >
                     {{ fmt.pctSigno(cambioPct(), 2) }}
                   </span>
                 }
@@ -85,7 +93,11 @@ interface FilaDetalleMes {
 
             <div class="mes-caja">
               <span class="kpi-label">Lo pusiste tú (Ahorro + Saldos)</span>
-              <div class="kpi-val valor-privado" [class]="fmt.claseSigno(esfuerzoTotal())">
+              <div
+                class="kpi-val valor-privado"
+                [class.pos]="fmt.claseSigno(esfuerzoTotal()) === 'pos'"
+                [class.neg]="fmt.claseSigno(esfuerzoTotal()) === 'neg'"
+              >
                 {{ fmt.eurSigno(esfuerzoTotal(), 0) }}
               </div>
               <span class="kpi-sub valor-privado">
@@ -95,7 +107,11 @@ interface FilaDetalleMes {
 
             <div class="mes-caja">
               <span class="kpi-label">Lo puso el mercado</span>
-              <div class="kpi-val valor-privado" [class]="fmt.claseSigno(m.mercado)">
+              <div
+                class="kpi-val valor-privado"
+                [class.pos]="fmt.claseSigno(m.mercado) === 'pos'"
+                [class.neg]="fmt.claseSigno(m.mercado) === 'neg'"
+              >
                 {{ fmt.eurSigno(m.mercado, 0) }}
               </div>
               <span class="kpi-sub">
@@ -138,14 +154,26 @@ interface FilaDetalleMes {
                       {{ f.nombre }}
                     </td>
                     <td class="num mono valor-privado">{{ fmt.eur(f.inicio, 0) }}</td>
-                    <td class="num mono valor-privado" [class]="fmt.claseSigno(f.esfuerzo)">
+                    <td
+                      class="num mono valor-privado"
+                      [class.pos]="fmt.claseSigno(f.esfuerzo) === 'pos'"
+                      [class.neg]="fmt.claseSigno(f.esfuerzo) === 'neg'"
+                    >
                       {{ f.esfuerzo !== 0 ? fmt.eurSigno(f.esfuerzo, 0) : '—' }}
                     </td>
-                    <td class="num mono valor-privado" [class]="fmt.claseSigno(f.mercado)">
+                    <td
+                      class="num mono valor-privado"
+                      [class.pos]="fmt.claseSigno(f.mercado) === 'pos'"
+                      [class.neg]="fmt.claseSigno(f.mercado) === 'neg'"
+                    >
                       {{ Math.abs(f.mercado) >= 0.5 ? fmt.eurSigno(f.mercado, 0) : '—' }}
                     </td>
                     <td class="num mono valor-privado">{{ fmt.eur(f.fin, 0) }}</td>
-                    <td class="num mono valor-privado" [class]="fmt.claseSigno(f.cambio)">
+                    <td
+                      class="num mono valor-privado"
+                      [class.pos]="fmt.claseSigno(f.cambio) === 'pos'"
+                      [class.neg]="fmt.claseSigno(f.cambio) === 'neg'"
+                    >
                       {{ fmt.eurSigno(f.cambio, 0) }}
                     </td>
                   </tr>
@@ -155,14 +183,26 @@ interface FilaDetalleMes {
                 <tr>
                   <td><strong>Total cartera</strong></td>
                   <td class="num mono valor-privado"><strong>{{ fmt.eur(m.inicio, 0) }}</strong></td>
-                  <td class="num mono valor-privado" [class]="fmt.claseSigno(esfuerzoTotal())">
+                  <td
+                    class="num mono valor-privado"
+                    [class.pos]="fmt.claseSigno(esfuerzoTotal()) === 'pos'"
+                    [class.neg]="fmt.claseSigno(esfuerzoTotal()) === 'neg'"
+                  >
                     <strong>{{ fmt.eurSigno(esfuerzoTotal(), 0) }}</strong>
                   </td>
-                  <td class="num mono valor-privado" [class]="fmt.claseSigno(m.mercado)">
+                  <td
+                    class="num mono valor-privado"
+                    [class.pos]="fmt.claseSigno(m.mercado) === 'pos'"
+                    [class.neg]="fmt.claseSigno(m.mercado) === 'neg'"
+                  >
                     <strong>{{ fmt.eurSigno(m.mercado, 0) }}</strong>
                   </td>
                   <td class="num mono valor-privado"><strong>{{ fmt.eur(m.fin, 0) }}</strong></td>
-                  <td class="num mono valor-privado" [class]="fmt.claseSigno(cambioTotal())">
+                  <td
+                    class="num mono valor-privado"
+                    [class.pos]="fmt.claseSigno(cambioTotal()) === 'pos'"
+                    [class.neg]="fmt.claseSigno(cambioTotal()) === 'neg'"
+                  >
                     <strong>{{ fmt.eurSigno(cambioTotal(), 0) }}</strong>
                   </td>
                 </tr>
