@@ -9,6 +9,7 @@ import { ValoracionModalComponent } from '../modals/valoracion-modal/valoracion-
 import { LoteSaldosModalComponent } from '../modals/lote-saldos-modal/lote-saldos-modal.component';
 import { CarteraPosicionesModalComponent } from '../modals/cartera-posiciones-modal/cartera-posiciones-modal.component';
 import { IconComponent } from '../icon/icon.component';
+import { CapTooltipDirective } from '../../directives/tooltip.directive';
 import {
   InformeImportacion,
   MovimientoCfg,
@@ -54,6 +55,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
     LoteSaldosModalComponent,
     CarteraPosicionesModalComponent,
     IconComponent,
+    CapTooltipDirective,
   ],
   template: `
     @if (store.cartera(); as c) {
@@ -436,7 +438,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla btn-tabla-primario"
                         (click)="abrirModalMovimiento(undefined, p.id)"
-                        title="Anotar compra, venta o dividendo"
+                        capTooltip="Anotar compra, venta o dividendo"
                       >
                         <cap-icon name="plus" [size]="13" />
                         <span>Compra</span>
@@ -445,7 +447,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla"
                         (click)="verMovimientosDeProducto(p.id)"
-                        title="Ver operaciones de este producto"
+                        capTooltip="Ver operaciones de este producto"
                       >
                         Movs ({{ numMovimientos(p.id) }})
                       </button>
@@ -454,7 +456,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla btn-tabla-primario"
                         (click)="abrirModalValoracion(undefined, p.id)"
-                        title="Anotar saldo o valoración"
+                        capTooltip="Anotar saldo o valoración"
                       >
                         <cap-icon name="plus" [size]="13" />
                         <span>Saldo</span>
@@ -463,7 +465,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla"
                         (click)="verSaldosDeProducto(p.id)"
-                        title="Ver saldos de este producto"
+                        capTooltip="Ver saldos de este producto"
                       >
                         Saldos ({{ numValoraciones(p.id) }})
                       </button>
@@ -472,7 +474,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                       type="button"
                       class="btn-tabla"
                       (click)="abrirModalProducto(p)"
-                      title="Editar configuración del producto"
+                      capTooltip="Editar configuración del producto"
                     >
                       <svg
                         viewBox="0 0 24 24"
@@ -490,7 +492,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                       type="button"
                       class="btn-tabla btn-tabla-peligro"
                       (click)="confirmarBorrarProducto(p)"
-                      title="Eliminar producto"
+                      capTooltip="Eliminar producto"
                       aria-label="Eliminar producto"
                     >
                       <svg
@@ -577,7 +579,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                           type="button"
                           class="btn-tabla btn-tabla-primario"
                           (click)="abrirModalPosicionesGrupo(el.grupoId, el.grupoNombre)"
-                          title="Indicar exactamente cuánto tienes en cada producto"
+                          capTooltip="Indicar exactamente cuánto tienes en cada producto"
                         >
                           <cap-icon name="plus" [size]="13" />
                           <span>Poner importes</span>
@@ -586,7 +588,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                           type="button"
                           class="btn-tabla"
                           (click)="irAImportarGrupo(el)"
-                          title="Importar extractos CSV/Excel de MyInvestor"
+                          capTooltip="Importar extractos CSV/Excel de MyInvestor"
                         >
                           <span>Importar MyInvestor</span>
                         </button>
@@ -594,7 +596,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                           type="button"
                           class="btn-tabla btn-tabla-peligro"
                           (click)="confirmarBorrarGrupo(el)"
-                          title="Eliminar cartera completa"
+                          capTooltip="Eliminar cartera completa"
                           aria-label="Eliminar cartera completa"
                         >
                           <svg
@@ -854,7 +856,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla"
                         (click)="duplicarMovimiento(m)"
-                        title="Repetir operación con fecha de hoy"
+                        capTooltip="Repetir operación con fecha de hoy"
                       >
                         Repetir
                       </button>
@@ -862,7 +864,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla"
                         (click)="abrirModalMovimiento(m)"
-                        title="Editar operación"
+                        capTooltip="Editar operación"
                       >
                         Editar
                       </button>
@@ -870,7 +872,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla btn-tabla-peligro"
                         (click)="confirmarBorrarMovimiento(m)"
-                        title="Eliminar operación"
+                        capTooltip="Eliminar operación"
                         aria-label="Eliminar operación"
                       >
                         <svg
@@ -985,7 +987,7 @@ type ElementoListaDatos = GrupoProductosDatos | ItemProductoSueltoDatos;
                         type="button"
                         class="btn-tabla btn-tabla-peligro"
                         (click)="confirmarBorrarValoracion(v)"
-                        title="Eliminar saldo"
+                        capTooltip="Eliminar saldo"
                         aria-label="Eliminar saldo"
                       >
                         <svg

@@ -12,6 +12,7 @@ import { ChartRenderFn, ChartService } from '../../services/chart.service';
 import { SvgChartComponent } from '../svg-chart/svg-chart.component';
 import { ObjetivoModalComponent } from '../modals/objetivo-modal/objetivo-modal.component';
 import { IconComponent } from '../icon/icon.component';
+import { CapTooltipDirective } from '../../directives/tooltip.directive';
 import { GrupoAgrupado, ProductoCalculado } from '../../models/portfolio.model';
 
 interface FilaAportacionTabla {
@@ -52,7 +53,13 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
 
 @Component({
   selector: 'cap-patrimonio-tab',
-  imports: [FormsModule, SvgChartComponent, ObjetivoModalComponent, IconComponent],
+  imports: [
+    FormsModule,
+    SvgChartComponent,
+    ObjetivoModalComponent,
+    IconComponent,
+    CapTooltipDirective,
+  ],
   template: `
     @if (store.datos(); as d) {
       @if (d.modo === 'demo') {
@@ -99,7 +106,7 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
             <div class="hero-kicker">
               <span>{{ store.filtrando() ? 'Patrimonio filtrado (' + store.visibles().length + ' de ' + store.todosComponentes().length + ')' : 'Patrimonio neto' }}</span>
               @if (ajusteVivoEur() !== 0 || store.hayActivosEnVivo()) {
-                <span class="vivo-pill" title="Cotizaciones en tiempo real">
+                <span class="vivo-pill" capTooltip="Cotizaciones en tiempo real">
                   <span class="vivo-dot"></span> En vivo
                 </span>
               }
@@ -116,7 +123,7 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
                   [class.pos]="fmt.claseSigno(plusvaliaMostrada()) === 'pos'"
                   [class.neg]="fmt.claseSigno(plusvaliaMostrada()) === 'neg'"
                 >
-                  {{ fmt.eurSigno(plusvaliaMostrada(), 0) }}
+                  <span class="valor-privado">{{ fmt.eurSigno(plusvaliaMostrada(), 0) }}</span>
                   @if (rentabilidadMostrada() !== null) {
                     ({{ fmt.pctSigno(rentabilidadMostrada(), 2) }})
                   }
@@ -149,7 +156,11 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
           <div class="hero-der">
             <div
               class="actualizacion-meta"
-              [title]="store.actualizandoPrecios() ? 'Sincronizando cotizaciones de mercado…' : 'Fecha y hora de la última actualización'"
+              [capTooltip]="
+                store.actualizandoPrecios()
+                  ? 'Sincronizando cotizaciones de mercado…'
+                  : 'Fecha y hora de la última actualización'
+              "
             >
               <span
                 class="actualizacion-dot"
@@ -232,7 +243,7 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
                 [class.off]="item.oculto"
                 (click)="onClickPillGrupo($event, item.ids)"
                 (dblclick)="store.toggleGrupoComponentes(item.ids, true)"
-                title="Clic: mostrar/ocultar toda la cartera · Doble clic o Alt+clic: ver solo esta cartera"
+                capTooltip="Clic: mostrar/ocultar toda la cartera · Doble clic o Alt+clic: ver solo esta cartera"
               >
                 <span class="dot" [style.background]="item.color"></span>
                 <span>{{ item.nombre }} ({{ item.miembros.length }})</span>
@@ -247,7 +258,7 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
                 [class.off]="store.ocultos().has(comp.id)"
                 (click)="onClickPill($event, comp.id)"
                 (dblclick)="store.toggleComponente(comp.id, true)"
-                title="Clic: mostrar/ocultar · Doble clic o Alt+clic: ver solo este activo"
+                capTooltip="Clic: mostrar/ocultar · Doble clic o Alt+clic: ver solo este activo"
               >
                 <span class="dot" [style.background]="colorPrimario(comp)"></span>
                 <span>{{ comp.corto || comp.nombre }}</span>
@@ -809,7 +820,8 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
             <div>
               <h2 class="card-title">Registro histórico de compras y aportaciones</h2>
               <p class="card-sub">
-                {{ filasAportacionesFiltradas().length }} operaciones · Total {{ fmt.eur(sumaAportacionesFiltradas(), 2) }}
+                {{ filasAportacionesFiltradas().length }} operaciones · Total
+                <span class="valor-privado">{{ fmt.eur(sumaAportacionesFiltradas(), 2) }}</span>
               </p>
             </div>
             <div class="controles-tabla">

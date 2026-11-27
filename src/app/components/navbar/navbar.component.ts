@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PortfolioStoreService, TabId } from '../../services/portfolio-store.service';
 import { LogoComponent } from '../logo/logo.component';
 import { IconComponent } from '../icon/icon.component';
+import { CapTooltipDirective } from '../../directives/tooltip.directive';
 
 export interface NavItem {
   id: TabId;
@@ -12,7 +13,7 @@ export interface NavItem {
 
 @Component({
   selector: 'cap-navbar',
-  imports: [RouterLink, RouterLinkActive, LogoComponent, IconComponent],
+  imports: [RouterLink, RouterLinkActive, LogoComponent, IconComponent, CapTooltipDirective],
   styles: [':host { display: contents; }'],
   host: {
     '(document:click)': 'cerrarMenu()',
@@ -88,7 +89,6 @@ export interface NavItem {
             [class.on]="store.modoPrivado()"
             [attr.aria-pressed]="store.modoPrivado()"
             (click)="store.alternarPrivado()"
-            title="Ocultar o mostrar importes monetarios (Modo discreto)"
             [attr.aria-label]="
               store.modoPrivado() ? 'Desactivar modo discreto' : 'Activar modo discreto'
             "
@@ -110,7 +110,12 @@ export interface NavItem {
             class="btn-secundario btn-sm topbar-btn"
             [disabled]="store.actualizandoPrecios()"
             (click)="store.actualizarPrecios()"
-            title="Sincronizar las últimas cotizaciones de mercado"
+            [capTooltip]="
+              store.actualizandoPrecios()
+                ? 'Actualizando cotizaciones de mercado…'
+                : 'Actualizar datos'
+            "
+            capTooltipPlacement="bottom"
             [attr.aria-label]="
               store.actualizandoPrecios() ? 'Sincronizando precios' : 'Actualizar precios'
             "
@@ -138,7 +143,8 @@ export interface NavItem {
                 [attr.aria-expanded]="menuAbierto()"
                 aria-haspopup="menu"
                 (click)="alternarMenu()"
-                title="Cuenta y ajustes"
+                capTooltip="Cuenta, tema y ajustes"
+                capTooltipPlacement="bottom"
               >
                 <span class="user-avatar" aria-hidden="true">{{
                   (u.nombre || u.email)[0].toUpperCase()
