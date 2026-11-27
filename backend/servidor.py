@@ -189,6 +189,10 @@ def obtener_estado_usuario():
     return modo_actual, cfg, calc, est
 
 
+def _ahora_iso_utc():
+    return dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
+
+
 def recalcula(descargar="faltan"):
     """Recalcula el panel con motor.py y persiste el resultado en PostgreSQL."""
     uid = uid_actual()
@@ -197,7 +201,7 @@ def recalcula(descargar="faltan"):
         modo_actual, cfg, _, est = obtener_estado_usuario()
         datos = motor.construir(cfg, carpeta_motor, descargar=descargar)
         if descargar is True or not est.get("preciosActualizados"):
-            est["preciosActualizados"] = dt.datetime.now().replace(microsecond=0).isoformat()
+            est["preciosActualizados"] = _ahora_iso_utc()
         if datos is not None:
             datos["modo"] = modo_actual
             datos["preciosActualizados"] = est.get("preciosActualizados")
@@ -523,7 +527,7 @@ def api_precios_vivo():
         precios = {}
     return jsonify(
         ok=True,
-        actualizado=dt.datetime.now().replace(microsecond=0).isoformat(),
+        actualizado=_ahora_iso_utc(),
         precios=precios,
     )
 

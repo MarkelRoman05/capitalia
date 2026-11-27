@@ -1029,9 +1029,23 @@
     $("#avisos").innerHTML = (D.avisos || [])
       .map(a => `<div class="av"><span>⚠</span><span>${a}</span></div>`).join("");
     const pa = D.preciosActualizados;
+    let textoActualizado = "Precios sin actualizar";
+    if (pa) {
+      const dPa = new Date(pa);
+      if (!Number.isNaN(dPa.getTime())) {
+        const y = dPa.getFullYear();
+        const m = String(dPa.getMonth() + 1).padStart(2, "0");
+        const day = String(dPa.getDate()).padStart(2, "0");
+        const hh = String(dPa.getHours()).padStart(2, "0");
+        const mm = String(dPa.getMinutes()).padStart(2, "0");
+        textoActualizado = `Precios actualizados el ${G.fmtFecha(`${y}-${m}-${day}`)} a las ${hh}:${mm}`;
+      } else {
+        textoActualizado = `Precios actualizados el ${G.fmtFecha(pa.slice(0, 10))} a las ${pa.slice(11, 16)}`;
+      }
+    }
     const fuentes = [...new Set(D.productos.map(p => p.fuentePrecio).filter(Boolean))];
     $("#pie").innerHTML =
-      `${pa ? `Precios actualizados el ${G.fmtFecha(pa.slice(0, 10))} a las ${pa.slice(11, 16)}` : "Precios sin actualizar"} ·
+      `${textoActualizado} ·
        datos valorados a ${G.fmtFecha(D.fechaExtracto)} ·
        ${D.total.diasInvertido} días invertido.<br>
        Fuentes de precios: ${fuentes.join(", ") || "ninguna"}. En la pestaña Productos verás la de cada uno.<br>

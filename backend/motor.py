@@ -1371,7 +1371,7 @@ def construir(cfg, carpeta, descargar=True):
                     "fechaRef": prod_v.get("navFecha") or fecha_extracto.isoformat()}
 
     datos = {
-        "generado": dt.datetime.now().replace(microsecond=0).isoformat(),
+        "generado": dt.datetime.now(dt.timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
         "titular": cfg.get("titular", "Mi patrimonio"),
         "moneda": cfg.get("moneda", "EUR"),
         "fechaExtracto": fecha_extracto.isoformat(),

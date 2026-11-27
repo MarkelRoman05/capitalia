@@ -862,7 +862,7 @@ export class PortfolioStoreService {
           );
     this.datos.set(panel);
     const tsPanel = panel.preciosActualizados || panel.generado || null;
-    if (tsPanel && (!this.ultimaActualizacion() || tsPanel > this.ultimaActualizacion()!)) {
+    if (tsPanel && this.esTimestampMasReciente(tsPanel, this.ultimaActualizacion())) {
       this.ultimaActualizacion.set(tsPanel);
     }
     if (panel.productos?.length && !this.productoSeleccionadoId()) {
@@ -886,6 +886,16 @@ export class PortfolioStoreService {
     }
 
     this.iniciarPollingVivo();
+  }
+
+  private esTimestampMasReciente(nuevo: string, actual: string | null): boolean {
+    if (!actual) return true;
+    const msNuevo = Date.parse(nuevo);
+    const msActual = Date.parse(actual);
+    if (!Number.isNaN(msNuevo) && !Number.isNaN(msActual)) {
+      return msNuevo > msActual;
+    }
+    return nuevo > actual;
   }
 
   private autoActualizarAlEntrar(): void {
