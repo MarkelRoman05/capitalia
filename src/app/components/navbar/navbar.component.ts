@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink, RouterLinkActive } from '@angular/router';
 import { PortfolioStoreService, TabId } from '../../services/portfolio-store.service';
 import { LogoComponent } from '../logo/logo.component';
@@ -13,6 +13,7 @@ export interface NavItem {
 
 @Component({
   selector: 'cap-navbar',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, RouterLinkActive, LogoComponent, IconComponent, CapTooltipDirective],
   styles: [':host { display: contents; }'],
   host: {
@@ -66,14 +67,13 @@ export interface NavItem {
                   @case ('rendimiento') {
                     <path d="M3 17l6-6 4 4 8-8M15 7h6v6" />
                   }
+                  @case ('fiscalidad') {
+                    <path d="M12 3v18M5 8h14M6 8l-2 6h4l-2-6zm12 0l-2 6h4l-2-6zM8 21h8" />
+                  }
                   @case ('datos') {
                     <path
                       d="M5 4h14a1 1 0 0 1 1 1v14a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1zm4 5h6m-6 4h6m-6 4h3"
                     />
-                  }
-                  @case ('ayuda') {
-                    <circle cx="12" cy="12" r="9" />
-                    <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01" />
                   }
                 }
               </svg>
@@ -215,6 +215,19 @@ export interface NavItem {
                     <span class="um-val">{{ store.tema() === 'oscuro' ? 'Claro' : 'Oscuro' }}</span>
                   </button>
 
+                  <button
+                    type="button"
+                    class="user-menu-item"
+                    role="menuitem"
+                    (click)="abrirAyuda()"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9" />
+                      <path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 1-1 1.7M12 17h.01" />
+                    </svg>
+                    Ayuda y guía rápida
+                  </button>
+
                   <div class="user-menu-sep"></div>
 
                   <button
@@ -247,8 +260,8 @@ export class NavbarComponent {
     { id: 'mes', ruta: '/mes', etiqueta: 'Este mes' },
     { id: 'fondos', ruta: '/productos', etiqueta: 'Productos' },
     { id: 'rendimiento', ruta: '/rendimiento', etiqueta: 'Rendimiento' },
+    { id: 'fiscalidad', ruta: '/fiscalidad', etiqueta: 'Fiscalidad' },
     { id: 'datos', ruta: '/datos', etiqueta: 'Mis datos' },
-    { id: 'ayuda', ruta: '/ayuda', etiqueta: 'Ayuda' },
   ];
 
   alternarMenu(): void {
@@ -262,5 +275,10 @@ export class NavbarComponent {
   abrirPerfil(): void {
     this.cerrarMenu();
     this.store.modalPerfilAbierto.set(true);
+  }
+
+  abrirAyuda(): void {
+    this.cerrarMenu();
+    this.store.modalAyudaAbierto.set(true);
   }
 }

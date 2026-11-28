@@ -1,4 +1,4 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
@@ -6,6 +6,7 @@ import { LogoComponent } from '../logo/logo.component';
 
 @Component({
   selector: 'cap-footer',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [RouterLink, LogoComponent],
   styles: [':host { display: block; }'],
   template: `

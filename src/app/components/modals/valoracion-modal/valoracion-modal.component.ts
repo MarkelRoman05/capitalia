@@ -1,4 +1,4 @@
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 import { ValoracionCfg } from '../../../models/portfolio.model';
@@ -6,6 +6,7 @@ import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-valoracion-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrarSiAbierto()',
@@ -140,6 +141,8 @@ export class ValoracionModalComponent {
     aportado: null,
   };
 
+  private readonly cdr = inject(ChangeDetectorRef);
+
   constructor() {
     effect(() => {
       if (this.abierto()) {
@@ -171,6 +174,7 @@ export class ValoracionModalComponent {
             aportado: null,
           };
         }
+        this.cdr.markForCheck();
       }
     });
   }

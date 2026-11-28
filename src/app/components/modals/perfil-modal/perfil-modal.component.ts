@@ -1,10 +1,11 @@
-import { Component, effect, inject } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, effect, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-perfil-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrar()',
@@ -105,6 +106,7 @@ import { IconComponent } from '../../icon/icon.component';
 })
 export class PerfilModalComponent {
   readonly store = inject(PortfolioStoreService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   nombre = '';
   email = '';
@@ -122,6 +124,7 @@ export class PerfilModalComponent {
         this.claveActual = '';
         this.claveNueva = '';
         this.error = null;
+        this.cdr.markForCheck();
       }
     });
   }
@@ -162,5 +165,6 @@ export class PerfilModalComponent {
     } else {
       this.error = fallo;
     }
+    this.cdr.markForCheck();
   }
 }

@@ -65,6 +65,14 @@ export const routes: Routes = [
           ),
       },
       {
+        path: 'fiscalidad',
+        title: 'Fiscalidad y Rentas · Capitalia',
+        loadComponent: () =>
+          import('./components/fiscalidad-tab/fiscalidad-tab.component').then(
+            (m) => m.FiscalidadTabComponent,
+          ),
+      },
+      {
         path: 'datos',
         title: 'Mis datos · Capitalia',
         loadComponent: () =>
@@ -72,9 +80,8 @@ export const routes: Routes = [
       },
       {
         path: 'ayuda',
-        title: 'Ayuda · Capitalia',
-        loadComponent: () =>
-          import('./components/ayuda-tab/ayuda-tab.component').then((m) => m.AyudaTabComponent),
+        redirectTo: 'patrimonio',
+        pathMatch: 'full',
       },
       { path: '', pathMatch: 'full', redirectTo: 'patrimonio' },
     ],

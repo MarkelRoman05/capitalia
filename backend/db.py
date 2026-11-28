@@ -10,6 +10,7 @@ Gestiona en PostgreSQL:
   - Histórico diario de patrimonio por usuario (tabla `historico_cartera`)
 """
 
+import atexit
 import datetime as dt
 import hashlib
 import json
@@ -17,17 +18,25 @@ import logging
 import os
 import re
 import secrets
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from urllib.parse import quote
 
 try:
     import psycopg
     from psycopg import sql
+    from psycopg.conninfo import make_conninfo
     from psycopg.rows import dict_row
     from psycopg.types.json import Jsonb
     _PSYCOPG = True
 except Exception:
     _PSYCOPG = False
+    make_conninfo = None
+
+try:
+    from psycopg_pool import ConnectionPool
+except ImportError:
+    ConnectionPool = None
 
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -108,7 +117,56 @@ def activo():
     return _PSYCOPG and _cfg() is not None
 
 
+_POOLS_LOCK = threading.Lock()
+_POOLS = {}
+
+
+def _cerrar_pools():
+    with _POOLS_LOCK:
+        for pool in _POOLS.values():
+            try:
+                pool.close()
+            except Exception:
+                pass
+        _POOLS.clear()
+
+
+atexit.register(_cerrar_pools)
+
+
+def _obtener_pool(dbname=None):
+    if ConnectionPool is None or not _PSYCOPG:
+        return None
+    c = _cfg()
+    if not c:
+        return None
+    target_db = dbname or c["dbname"]
+    with _POOLS_LOCK:
+        pool = _POOLS.get(target_db)
+        if pool is None:
+            conninfo = make_conninfo(
+                host=c["host"],
+                port=c["port"],
+                dbname=target_db,
+                user=c["user"],
+                password=c["password"],
+                connect_timeout=5,
+            )
+            pool = ConnectionPool(
+                conninfo=conninfo,
+                min_size=1,
+                max_size=10,
+                kwargs={"row_factory": dict_row, "connect_timeout": 5},
+            )
+            _POOLS[target_db] = pool
+        return pool
+
+
 def _conectar(dbname=None, autocommit=False):
+    if not autocommit:
+        pool = _obtener_pool(dbname)
+        if pool is not None:
+            return pool.connection()
     c = _cfg()
     con = psycopg.connect(
         host=c["host"],
@@ -199,8 +257,15 @@ def _crea_tablas():
                 comision      DOUBLE PRECISION,
                 nota          TEXT NOT NULL DEFAULT '',
                 origen        TEXT NOT NULL DEFAULT 'manual',
+                producto_destino TEXT,
+                unidades_destino DOUBLE PRECISION,
+                retencion     DOUBLE PRECISION,
                 PRIMARY KEY (usuario_id, id)
             );
+
+            ALTER TABLE movimientos_rel ADD COLUMN IF NOT EXISTS producto_destino TEXT;
+            ALTER TABLE movimientos_rel ADD COLUMN IF NOT EXISTS unidades_destino DOUBLE PRECISION;
+            ALTER TABLE movimientos_rel ADD COLUMN IF NOT EXISTS retencion DOUBLE PRECISION;
 
             CREATE TABLE IF NOT EXISTS valoraciones_rel (
                 usuario_id    INTEGER NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
@@ -522,8 +587,9 @@ def _sincronizar_relacional(cur, uid, cfg):
         cur.execute(
             """
             INSERT INTO movimientos_rel (
-                usuario_id, id, producto_id, fecha, tipo, unidades, importe, comision, nota, origen
-            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                usuario_id, id, producto_id, fecha, tipo, unidades, importe, comision,
+                nota, origen, producto_destino, unidades_destino, retencion
+            ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """,
             (
                 uid,
@@ -536,6 +602,9 @@ def _sincronizar_relacional(cur, uid, cfg):
                 float(m["comision"]) if m.get("comision") is not None else None,
                 str(m.get("nota", "")),
                 str(m.get("origen", "manual")),
+                str(m["productoDestino"]) if m.get("productoDestino") else None,
+                float(m["unidadesDestino"]) if m.get("unidadesDestino") is not None else None,
+                float(m["retencion"]) if m.get("retencion") is not None else None,
             ),
         )
 
@@ -718,7 +787,7 @@ def obtener_copia(uid, archivo):
 # ---------------------------------------------------------------- entidades (bancos y brókers)
 
 _ENTIDADES_SEED = (
-    ("BBVA", "bbva.es", "Banco español", "banco bilbao vizcaya"),
+    ("BBVA", "bbva.com", "Banco español", "banco bilbao vizcaya bbva.es"),
     ("Banco Santander", "santander.com", "Banco español", "santander san"),
     ("CaixaBank", "caixabank.com", "Banco español", "la caixa caixa"),
     ("Banco Sabadell", "bancsabadell.com", "Banco español", "sabadell"),
@@ -776,29 +845,67 @@ def _logo_favicon(dominio):
     dom = (dominio or "").strip().lower()
     if not dom:
         return ""
-    return f"https://www.google.com/s2/favicons?domain={quote(dom)}&sz=128"
+    return f"/api/bancos/logo?dominio={quote(dom)}"
 
 
 def _seed_entidades(cur):
     for nombre, dominio, categoria, aliases in _ENTIDADES_SEED:
+        logo_local = _logo_favicon(dominio)
         cur.execute(
             """
             INSERT INTO entidades (nombre, dominio, logo, categoria, aliases, origen)
             VALUES (%s, %s, %s, %s, %s, 'seed')
-            ON CONFLICT (nombre) DO NOTHING
+            ON CONFLICT (nombre) DO UPDATE
+            SET dominio = CASE WHEN entidades.origen = 'seed' THEN EXCLUDED.dominio ELSE entidades.dominio END,
+                logo = CASE
+                    WHEN entidades.logo = ''
+                      OR entidades.logo LIKE '%%cdn.brandfetch.io%%'
+                      OR entidades.logo LIKE '%%google.com/s2/favicons%%'
+                      OR entidades.origen = 'seed'
+                    THEN EXCLUDED.logo
+                    ELSE entidades.logo
+                END
             """,
-            (nombre, dominio, _logo_favicon(dominio), categoria, aliases),
+            (nombre, dominio, logo_local, categoria, aliases),
         )
 
 
 def _entidad_publica(fila):
+    dominio = (fila.get("dominio") or "").strip().lower()
+    logo = (fila.get("logo") or "").strip()
+    if dominio and (
+        not logo
+        or "cdn.brandfetch.io" in logo
+        or "google.com/s2/favicons" in logo
+        or "icon.horse" in logo
+    ):
+        logo = _logo_favicon(dominio)
     return {
         "id": fila.get("id"),
         "nombre": fila.get("nombre") or "",
-        "dominio": fila.get("dominio") or "",
-        "logo": fila.get("logo") or "",
+        "dominio": dominio,
+        "logo": logo,
         "categoria": fila.get("categoria") or "Entidad",
     }
+
+
+def listar_entidades_seed(q=""):
+    """Devuelve el catálogo semilla cuando PostgreSQL no está activo (modo local)."""
+    q_limpio = (q or "").strip().lower()
+    salida = []
+    for nombre, dominio, categoria, aliases in _ENTIDADES_SEED:
+        if q_limpio:
+            texto_bus = f"{nombre} {dominio} {categoria} {aliases}".lower()
+            if q_limpio not in texto_bus:
+                continue
+        salida.append({
+            "id": None,
+            "nombre": nombre,
+            "dominio": dominio,
+            "logo": _logo_favicon(dominio),
+            "categoria": categoria,
+        })
+    return salida
 
 
 def listar_entidades(uid=None, q=""):
@@ -900,10 +1007,10 @@ def registrar_entidad(nombre, dominio="", logo="", categoria="", uid=None, orige
         return None
     dominio = (dominio or "").strip().lower()[:160]
     logo = (logo or "").strip()[:500]
-    if logo and not logo.startswith("https://"):
-        logo = ""
-    if not logo and dominio:
+    if dominio:
         logo = _logo_favicon(dominio)
+    elif logo and not (logo.startswith("/api/bancos/logo?") or logo.startswith("https://")):
+        logo = ""
     categoria_limpia = (categoria or "").strip()[:60] or (dominio or "Entidad personalizada")
 
     with _conectar() as con, con.cursor() as cur:
@@ -971,51 +1078,27 @@ def registrar_entidad(nombre, dominio="", logo="", categoria="", uid=None, orige
 
 
 def sincronizar_logos_entidades(solo_faltantes=True):
-    """Actualiza en PostgreSQL los logos faltantes o de favicon usando Brandfetch."""
+    """Normaliza en PostgreSQL los logos de entidades para usar el proxy cacheado local."""
     if not activo():
         return 0
-    from . import buscar
-
     with _conectar() as con, con.cursor() as cur:
         if solo_faltantes:
             cur.execute(
                 """
-                SELECT id, nombre, dominio, logo
+                SELECT id, dominio
                 FROM entidades
                 WHERE TRIM(dominio) <> ''
-                  AND (logo = '' OR logo LIKE '%%google.com/s2/favicons%%')
+                  AND (logo = '' OR logo LIKE '%%cdn.brandfetch.io%%' OR logo LIKE '%%google.com/s2/favicons%%')
                 ORDER BY id
                 """
             )
         else:
-            cur.execute(
-                """
-                SELECT id, nombre, dominio, logo
-                FROM entidades
-                WHERE TRIM(dominio) <> ''
-                ORDER BY id
-                """
-            )
+            cur.execute("SELECT id, dominio FROM entidades WHERE TRIM(dominio) <> '' ORDER BY id")
         filas = cur.fetchall()
-
-    if not filas:
-        return 0
-
-    def _resuelve(fila):
-        logo = buscar.resolver_logo_brandfetch(fila["dominio"], fila["nombre"])
-        return (fila["id"], logo)
-
-    with ThreadPoolExecutor(max_workers=8) as ex:
-        resueltos = [r for r in ex.map(_resuelve, filas) if r[1]]
-
-    if not resueltos:
-        return 0
-
-    with _conectar() as con, con.cursor() as cur:
-        for ent_id, logo in resueltos:
+        for fila in filas:
             cur.execute(
                 "UPDATE entidades SET logo = %s WHERE id = %s",
-                (logo, ent_id),
+                (_logo_favicon(fila["dominio"]), fila["id"]),
             )
         con.commit()
-    return len(resueltos)
+    return len(filas)

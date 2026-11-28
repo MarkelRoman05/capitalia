@@ -1,0 +1,501 @@
+/* ==========================================================================
+   MÓDULOS AVANZADOS (FASE 2, 3 Y 4): SALUD, PROYECCIÓN, HEATMAP, X-RAY,
+   REBALANCEO, FISCALIDAD, DIVIDENDOS Y PRODUCTOS ESPECIALIZADOS
+   ========================================================================== */
+
+.salud-barra {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.9rem 1.2rem;
+}
+
+.salud-cab {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.salud-titulo {
+  margin: 0;
+  font-size: 0.94rem;
+  font-weight: 700;
+}
+
+.salud-items {
+  display: flex;
+  align-items: center;
+  gap: 1.35rem;
+  flex-wrap: wrap;
+}
+
+.salud-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.12rem;
+}
+
+.salud-etq {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.salud-val {
+  font-size: 0.98rem;
+  font-weight: 700;
+}
+
+.salud-sub {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.proy-controles-extra {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.proy-resumen-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.proy-fire-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  margin-bottom: 0.15rem;
+}
+
+.seg-group-xs .seg-btn {
+  padding: 0.16rem 0.42rem;
+  font-size: 0.7rem;
+}
+
+.proy-nota-real {
+  margin: 0.4rem 0 0.75rem;
+  font-size: 0.76rem;
+  color: var(--muted);
+}
+
+.heatmap-tabla th,
+.heatmap-tabla td {
+  text-align: center;
+  padding: 0.44rem 0.35rem;
+  font-size: 0.77rem;
+}
+
+.heatmap-tabla th:first-child,
+.heatmap-tabla td:first-child {
+  text-align: left;
+  padding-left: 0.65rem;
+  font-weight: 700;
+}
+
+.heatmap-celda {
+  border-radius: 5px;
+  font-weight: 600;
+}
+
+.heatmap-total {
+  border-left: 1px solid var(--border);
+  font-weight: 700;
+}
+
+.riesgo-resumen-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.riesgo-kpi-box {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.7rem 0.9rem;
+}
+
+.riesgo-kpi-box span {
+  display: block;
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.riesgo-kpi-box strong {
+  display: block;
+  margin-top: 0.2rem;
+  font-size: 1.05rem;
+}
+
+.estres-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+.estres-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.9rem 1rem;
+}
+
+.estres-cab {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.estres-desc {
+  margin: 0 0 0.65rem;
+  font-size: 0.77rem;
+  color: var(--muted);
+  line-height: 1.38;
+}
+
+.estres-pie {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.xray-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.xray-bloque {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.95rem 1.05rem;
+}
+
+.xray-barras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.xray-fila-cab {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.81rem;
+  margin-bottom: 0.2rem;
+}
+
+.xray-emp-nom {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.xray-track {
+  height: 7px;
+  border-radius: 999px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.xray-fill {
+  height: 100%;
+  border-radius: 999px;
+  background: var(--primary);
+}
+
+.xray-alertas {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+}
+
+.xray-alerta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--gold) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--gold) 35%, transparent);
+  color: var(--txt);
+  font-size: 0.81rem;
+}
+
+.tag-solapado {
+  background: color-mix(in srgb, var(--primary) 16%, transparent);
+  color: var(--primary);
+}
+
+.tag-alerta {
+  background: color-mix(in srgb, var(--neg) 16%, transparent);
+  color: var(--neg);
+}
+
+.drift-celda {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.reb-control {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.reb-control label {
+  font-size: 0.8rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.reb-control input {
+  width: 130px;
+}
+
+/* ---------- Fiscalidad y Dividendos ---------- */
+.fis-subnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.fis-graficos-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.fis-tlh-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 0.85rem;
+}
+
+.fis-tlh-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.9rem 1rem;
+}
+
+.fis-tlh-cab {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.fis-tlh-datos {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  color: var(--txt-2);
+  margin-top: 0.35rem;
+}
+
+.fis-nota-legal {
+  margin-top: 1rem;
+  padding: 0.7rem 0.95rem;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.79rem;
+  line-height: 1.45;
+}
+
+/* ---------- Productos Especializados (Fase 4) ---------- */
+.spec-section-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+  gap: 1rem;
+}
+
+.spec-card {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.spec-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.spec-card-title {
+  margin: 0;
+  font-size: 0.96rem;
+  font-weight: 700;
+}
+
+.spec-metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(115px, 1fr));
+  gap: 0.6rem;
+}
+
+.spec-metric {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0.55rem 0.7rem;
+}
+
+.spec-metric span {
+  display: block;
+  font-size: 0.71rem;
+  color: var(--muted);
+}
+
+.spec-metric strong {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.94rem;
+}
+
+.spec-sim-box {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.spec-sim-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  gap: 0.75rem;
+}
+
+.spec-sim-inputs .campo {
+  margin-bottom: 0;
+}
+
+.spec-veredicto {
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--r-sm);
+  background: color-mix(in srgb, var(--primary) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 32%, transparent);
+  font-size: 0.82rem;
+  color: var(--txt);
+}
+
+/* ---------- Atribución FX (Efecto activo vs. divisa) ---------- */
+.fx-atrib-box {
+  margin-top: 1.15rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.fx-atrib-resumen {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-md);
+  padding: 0.85rem 1rem;
+}
+
+.fx-atrib-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.65rem;
+}
+
+.fx-atrib-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.fx-atrib-item {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--r-sm);
+  padding: 0.65rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.16rem;
+}
+
+.fx-atrib-resumen .fx-atrib-item {
+  background: var(--surface);
+}
+
+.fx-atrib-item span {
+  font-size: 0.74rem;
+  color: var(--muted);
+}
+
+.fx-atrib-item strong {
+  font-size: 1rem;
+}
+
+.fx-atrib-item small {
+  font-size: 0.73rem;
+}
+
+/* ---------- Badges de calendario de cobros y presets ---------- */
+.cobro-badge-div {
+  background: color-mix(in srgb, var(--pos) 15%, transparent);
+  color: var(--pos);
+}
+
+.cobro-badge-rf {
+  background: color-mix(in srgb, var(--primary) 15%, transparent);
+  color: var(--primary);
+}
+
+.cobro-badge-alq {
+  background: color-mix(in srgb, var(--gold) 18%, transparent);
+  color: var(--gold);
+}
+
+.pm-presets-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.4rem;
+}
+
+@media (max-width: 960px) {
+  .proy-resumen-4,
+  .xray-grid,
+  .fis-graficos-grid,
+  .fx-atrib-grid {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,4 +1,5 @@
 import {
+  ChangeDetectionStrategy,
   Component,
   ElementRef,
   OnDestroy,
@@ -24,6 +25,7 @@ function normalizarTexto(s: string): string {
 
 @Component({
   selector: 'cap-banco-selector',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   host: {
     '(document:click)': 'alClicDocumento($event)',
@@ -412,9 +414,14 @@ export class BancoSelectorComponent implements OnDestroy {
 
   alErrorLogo(ev: Event, item: EntidadBanco): void {
     const img = ev.target as HTMLImageElement | null;
-    if (img && item.dominio && !img.dataset['fallback']) {
+    if (
+      img &&
+      item.dominio &&
+      !img.dataset['fallback'] &&
+      !(item.logo || '').startsWith('/api/bancos/logo')
+    ) {
       img.dataset['fallback'] = '1';
-      img.src = `https://icon.horse/icon/${encodeURIComponent(item.dominio)}`;
+      img.src = `/api/bancos/logo?dominio=${encodeURIComponent(item.dominio)}`;
       return;
     }
     if (item.logo) {

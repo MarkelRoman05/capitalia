@@ -1131,6 +1131,27 @@ def buscar(texto, tipo="todos"):
 
 
 _CACHE_BANCOS = {}
+_DOMINIO_RE = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$")
+_TIPOS_IMAGEN_PERMITIDOS = {"image/webp", "image/png", "image/jpeg", "image/x-icon", "image/vnd.microsoft.icon", "image/svg+xml", "image/gif"}
+
+
+def normalizar_dominio_banco(dominio):
+    dom = (dominio or "").strip().lower()
+    if dom.startswith("https://"):
+        dom = dom[8:]
+    elif dom.startswith("http://"):
+        dom = dom[7:]
+    dom = dom.split("/", 1)[0].split("?", 1)[0].strip(".")
+    if dom.startswith("www."):
+        dom = dom[4:]
+    return dom if _DOMINIO_RE.fullmatch(dom) else ""
+
+
+def url_logo_banco(dominio):
+    dom = normalizar_dominio_banco(dominio)
+    if not dom:
+        return ""
+    return f"/api/bancos/logo?dominio={urllib.parse.quote(dom)}"
 
 
 def buscar_bancos(texto):
@@ -1156,7 +1177,7 @@ def buscar_bancos(texto):
         if not isinstance(item, dict):
             continue
         nombre = (item.get("name") or "").strip()
-        dominio = (item.get("domain") or "").strip().lower()
+        dominio = normalizar_dominio_banco(item.get("domain") or "")
         if not nombre or not dominio:
             continue
         if dominio in vistos or nombre.lower() in vistos:
@@ -1164,14 +1185,12 @@ def buscar_bancos(texto):
         vistos.add(dominio)
         vistos.add(nombre.lower())
 
-        icono = (item.get("icon") or "").strip()
-        if not icono.startswith("https://"):
-            icono = f"https://www.google.com/s2/favicons?domain={urllib.parse.quote(dominio)}&sz=128"
-
+        icono_remoto = (item.get("icon") or "").strip()
         salida.append({
             "nombre": nombre,
             "dominio": dominio,
-            "logo": icono,
+            "logo": url_logo_banco(dominio),
+            "logoRemoto": icono_remoto if icono_remoto.startswith("https://") else "",
             "verificado": bool(item.get("verified")),
         })
         if len(salida) >= 10:
@@ -1183,7 +1202,7 @@ def buscar_bancos(texto):
 
 def resolver_logo_brandfetch(dominio, nombre=""):
     """Resuelve la URL oficial del logo en Brandfetch a partir de dominio o nombre."""
-    dom = (dominio or "").strip().lower()
+    dom = normalizar_dominio_banco(dominio)
     stem = dom.split(".")[0] if "." in dom else dom
     consultas = []
     for q in (dom, (nombre or "").strip(), stem):
@@ -1193,7 +1212,7 @@ def resolver_logo_brandfetch(dominio, nombre=""):
     respaldo = None
     for q in consultas:
         for item in buscar_bancos(q):
-            logo = item.get("logo") or ""
+            logo = item.get("logoRemoto") or item.get("logo") or ""
             item_dom = (item.get("dominio") or "").lower()
             if "cdn.brandfetch.io" not in logo:
                 continue
@@ -1204,3 +1223,45 @@ def resolver_logo_brandfetch(dominio, nombre=""):
             ):
                 respaldo = logo
     return respaldo
+
+
+def _descargar_imagen_segura(url, timeout=7):
+    """Descarga bytes de imagen verificando Content-Type y tamaño máximo (512 KB)."""
+    if not url or not url.startswith("https://"):
+        return None, None
+    try:
+        req = urllib.request.Request(url, headers=UA)
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            if resp.status != 200:
+                return None, None
+            ct = (resp.headers.get("Content-Type") or "").split(";", 1)[0].strip().lower()
+            if ct not in _TIPOS_IMAGEN_PERMITIDOS:
+                return None, None
+            datos = resp.read(512 * 1024 + 1)
+            if len(datos) < 120 or len(datos) > 512 * 1024:
+                return None, None
+            return datos, ct
+    except Exception:
+        return None, None
+
+
+def descargar_logo_banco(dominio, nombre=""):
+    """Descarga el logo más actualizado y nítido de un banco (Brandfetch fresco → Google faviconV2 → DuckDuckGo)."""
+    dom = normalizar_dominio_banco(dominio)
+    if not dom:
+        return None, None
+
+    candidatos = []
+    bf_url = resolver_logo_brandfetch(dom, nombre)
+    if bf_url:
+        candidatos.append(bf_url)
+    candidatos.append(
+        f"https://t1.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=https://{urllib.parse.quote(dom)}&size=128"
+    )
+    candidatos.append(f"https://icons.duckduckgo.com/ip3/{urllib.parse.quote(dom)}.ico")
+
+    for url in candidatos:
+        datos, ct = _descargar_imagen_segura(url)
+        if datos and ct:
+            return datos, ct
+    return None, None

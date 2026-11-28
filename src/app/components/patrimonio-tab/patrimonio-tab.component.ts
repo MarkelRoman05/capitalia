@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
@@ -14,18 +14,11 @@ import { ObjetivoModalComponent } from '../modals/objetivo-modal/objetivo-modal.
 import { IconComponent } from '../icon/icon.component';
 import { CapTooltipDirective } from '../../directives/tooltip.directive';
 import { GrupoAgrupado, ProductoCalculado } from '../../models/portfolio.model';
-
-interface FilaAportacionTabla {
-  fecha: string;
-  importe: number;
-  participaciones?: number;
-  precio?: number | null;
-  prodId: string;
-  prodNombre: string;
-  color: string;
-  etqPrecio: string;
-  esPasivo: boolean;
-}
+import { SaludFinancieraCardComponent } from './salud-financiera-card.component';
+import { ProyeccionCardComponent } from './proyeccion-card.component';
+import { HeroPatrimonioComponent } from './hero-patrimonio.component';
+import { HitosPatrimonioComponent } from './hitos-patrimonio.component';
+import { TablaAportacionesComponent } from './tabla-aportaciones.component';
 
 interface ItemPatrimonioGrupo {
   esGrupo: true;
@@ -53,12 +46,18 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
 
 @Component({
   selector: 'cap-patrimonio-tab',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     FormsModule,
     SvgChartComponent,
     ObjetivoModalComponent,
     IconComponent,
     CapTooltipDirective,
+    SaludFinancieraCardComponent,
+    ProyeccionCardComponent,
+    HeroPatrimonioComponent,
+    HitosPatrimonioComponent,
+    TablaAportacionesComponent,
   ],
   template: `
     @if (store.datos(); as d) {
@@ -98,118 +97,15 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
         </section>
       } @else {
         <!-- HERO PATRIMONIO -->
-        <section class="hero-patrimonio">
-          <div class="hero-izq">
-            @if (saludo()) {
-              <p class="hero-saludo">{{ saludo() }}</p>
-            }
-            <div class="hero-kicker">
-              <span>{{ store.filtrando() ? 'Patrimonio filtrado (' + store.visibles().length + ' de ' + store.todosComponentes().length + ')' : 'Patrimonio neto' }}</span>
-              @if (ajusteVivoEur() !== 0 || store.hayActivosEnVivo()) {
-                <span class="vivo-pill" capTooltip="Cotizaciones en tiempo real">
-                  <span class="vivo-dot"></span> En vivo
-                </span>
-              }
-            </div>
-
-            <div class="hero-cifra valor-privado">
-              {{ fmt.eur(patrimonioMostrado(), 2) }}
-            </div>
-
-            <div class="hero-badges">
-              @if (metricasActivas().plusvalia !== null) {
-                <span
-                  class="chip-rent"
-                  [class.pos]="fmt.claseSigno(plusvaliaMostrada()) === 'pos'"
-                  [class.neg]="fmt.claseSigno(plusvaliaMostrada()) === 'neg'"
-                >
-                  <span class="valor-privado">{{ fmt.eurSigno(plusvaliaMostrada(), 0) }}</span>
-                  @if (rentabilidadMostrada() !== null) {
-                    ({{ fmt.pctSigno(rentabilidadMostrada(), 2) }})
-                  }
-                </span>
-              }
-              @if (metricasActivas().tir !== null) {
-                <span class="chip-neutro">
-                  TIR {{ fmt.pctSigno(metricasActivas().tir, 2) }} anual
-                </span>
-              }
-            </div>
-
-            <div class="hero-sub">
-              @if (metricasActivas().aportado > 0) {
-                <span class="valor-privado">
-                  {{ fmt.eur(metricasActivas().aportado, 0) }} invertidos de tu bolsillo
-                </span>
-                @if (metricasActivas().valor - metricasActivas().valorConCoste > 1) {
-                  <span class="valor-privado">
-                    + {{ fmt.eur(metricasActivas().valor - metricasActivas().valorConCoste, 0) }} en otros activos
-                  </span>
-                }
-              }
-              @if (d.fechas.length) {
-                <span>· Desde {{ fmt.fechaCorta(d.fechas[0]) }} hasta {{ fmt.fechaCorta(d.fechas[d.fechas.length - 1]) }}</span>
-              }
-            </div>
-          </div>
-
-          <div class="hero-der">
-            <div
-              class="actualizacion-meta"
-              [capTooltip]="
-                store.actualizandoPrecios()
-                  ? 'Sincronizando cotizaciones de mercado…'
-                  : 'Fecha y hora de la última actualización'
-              "
-            >
-              <span
-                class="actualizacion-dot"
-                [class.actualizando]="store.actualizandoPrecios()"
-                [class.en-vivo]="!store.actualizandoPrecios() && store.hayActivosEnVivo()"
-              ></span>
-              @if (store.actualizandoPrecios()) {
-                <span>Actualizando datos…</span>
-              } @else if (store.ultimaActualizacion()) {
-                <span>Actualizado: <strong class="mono">{{ fmt.fechaHora(store.ultimaActualizacion()) }}</strong></span>
-              } @else {
-                <span>Sin actualizar</span>
-              }
-            </div>
-
-            @if (d.objetivo && d.objetivo.activo && d.objetivo.importe > 0) {
-              <div class="objetivo-box">
-                <div class="objetivo-cab">
-                  <span class="objetivo-etq">{{ d.objetivo.etiqueta || 'Objetivo de patrimonio' }}</span>
-                  <button type="button" class="btn-link" (click)="abrirModalObjetivo()">Editar</button>
-                </div>
-                <div class="objetivo-nums">
-                  <strong class="mono">{{ fmt.num(progresoObjetivoPct(), 1) }} %</strong>
-                  <span class="mono muted valor-privado">de {{ fmt.eur(d.objetivo.importe, 0) }}</span>
-                </div>
-                <div class="barra-prog">
-                  <div class="barra-prog-fill" [style.width.%]="progresoObjetivoPct()"></div>
-                </div>
-                <div class="objetivo-pie">
-                  @if (faltaObjetivo() > 0) {
-                    <span class="valor-privado">Faltan {{ fmt.eur(faltaObjetivo(), 0) }}</span>
-                    @if (estimacionObjetivoTexto()) {
-                      <span>· {{ estimacionObjetivoTexto() }}</span>
-                    }
-                  } @else {
-                    <span class="pos">¡Objetivo alcanzado!</span>
-                  }
-                </div>
-              </div>
-            } @else {
-              <div class="objetivo-box objetivo-vacio">
-                <p>Define una meta patrimonial para seguir tu progreso mes a mes.</p>
-                <button type="button" class="btn-secundario btn-sm" (click)="abrirModalObjetivo()">
-                  Fijar objetivo
-                </button>
-              </div>
-            }
-          </div>
-        </section>
+        <cap-hero-patrimonio
+          [patrimonioMostrado]="patrimonioMostrado()"
+          [plusvaliaMostrada]="plusvaliaMostrada()"
+          [rentabilidadMostrada]="rentabilidadMostrada()"
+          [ajusteVivoEur]="ajusteVivoEur()"
+          [metricasActivas]="metricasActivas()"
+          [proyRent]="proyRent()"
+          (abrirObjetivo)="abrirModalObjetivo()"
+        />
 
         <!-- BARRA DE FILTROS -->
         <section class="barra-filtro" aria-label="Filtrar activos del panel">
@@ -342,10 +238,22 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
               {{ fmt.pct(metricasActivas().caida, 1) }}
             </div>
             <span class="kpi-sub">
-              {{ metricasActivas().caidaFecha ? 'Mínimo el ' + fmt.fechaCorta(metricasActivas().caidaFecha!) : 'Sin caídas registradas' }}
+              {{
+                metricasActivas().caidaFecha
+                  ? 'Mínimo el ' + fmt.fechaCorta(metricasActivas().caidaFecha!) + ' · Sobre rentabilidad real (TWR)'
+                  : 'Sin caídas registradas'
+              }}
             </span>
           </article>
         </section>
+
+        <!-- SALUD FINANCIERA -->
+        @if (d.salud; as sal) {
+          <cap-salud-financiera-card
+            [salud]="sal"
+            (configurarGasto)="abrirModalObjetivo()"
+          />
+        }
 
         <!-- GRÁFICO PRINCIPAL DE EVOLUCIÓN -->
         <section class="panel-card bloque-seccion">
@@ -697,213 +605,29 @@ type ItemPatrimonio = ItemPatrimonioGrupo | ItemPatrimonioSuelto;
                 <p class="card-sub">{{ resumenAportacionesMesTexto() }}</p>
               </div>
             </div>
-            <cap-svg-chart [renderFn]="renderAportacionesMesFn()" [minHeight]="250" />
+            <cap-svg-chart [renderFn]="renderAportacionesMesFn()" [minHeight]="300" />
           </section>
         </div>
 
         <!-- HITOS Y SIMULADOR DE PROYECCIÓN FUTURA -->
         <div class="dos-columnas bloque-seccion">
-          <section class="panel-card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Hitos de patrimonio</h2>
-                <p class="card-sub">Metas escalonadas alcanzadas y próximas por conquistar</p>
-              </div>
-            </div>
-            <div class="hitos-grid">
-              @for (h of d.total.hitos; track h.importe) {
-                <div class="hito-item" [class.hito-logrado]="!!h.fecha">
-                  <div class="hito-cab">
-                    <span class="hito-icono">
-                      <cap-icon [name]="h.fecha ? 'check' : 'target'" [size]="15" />
-                    </span>
-                    <strong class="hito-imp mono valor-privado">{{ fmt.eur(h.importe, 0) }}</strong>
-                  </div>
-                  @if (h.fecha) {
-                    <span class="hito-fecha">Logrado el {{ fmt.fechaCorta(h.fecha) }}</span>
-                  } @else {
-                    <div class="barra-prog barra-prog-sm">
-                      <div
-                        class="barra-prog-fill"
-                        [style.width.%]="porcentajeHito(h.importe)"
-                      ></div>
-                    </div>
-                    <span class="hito-fecha valor-privado">
-                      {{ fmt.num(porcentajeHito(h.importe), 0) }}% · faltan {{ fmt.eur(Math.max(0, h.importe - d.total.patrimonio), 0) }}
-                    </span>
-                  }
-                </div>
-              }
-            </div>
-          </section>
+          <cap-hitos-patrimonio
+            [hitos]="d.total.hitos || []"
+            [patrimonioActual]="patrimonioMostrado()"
+            [patrimonioBase]="d.total.patrimonio"
+          />
 
-          <section class="panel-card">
-            <div class="card-header">
-              <div>
-                <h2 class="card-title">Proyección de interés compuesto</h2>
-                <p class="card-sub">Simulación partiendo de tu patrimonio actual</p>
-              </div>
-            </div>
-
-            <div class="proy-sliders">
-              <div class="slider-grupo">
-                <div class="slider-cab">
-                  <label for="proy-anos">Horizonte</label>
-                  <strong class="mono">{{ proyAnos() }} años ({{ anioFuturo() }})</strong>
-                </div>
-                <input
-                  id="proy-anos"
-                  type="range"
-                  min="1"
-                  max="35"
-                  step="1"
-                  [ngModel]="proyAnos()"
-                  (ngModelChange)="proyAnos.set(+$event)"
-                />
-              </div>
-
-              <div class="slider-grupo">
-                <div class="slider-cab">
-                  <label for="proy-rent">Rentabilidad anual esperada</label>
-                  <strong class="mono">{{ fmt.num(proyRent(), 1) }} %</strong>
-                </div>
-                <input
-                  id="proy-rent"
-                  type="range"
-                  min="0"
-                  max="15"
-                  step="0.5"
-                  [ngModel]="proyRent()"
-                  (ngModelChange)="proyRent.set(+$event)"
-                />
-              </div>
-
-              <div class="slider-grupo">
-                <div class="slider-cab">
-                  <label for="proy-aport">Aportación mensual</label>
-                  <strong class="mono valor-privado">{{ fmt.eur(proyAport(), 0) }}/mes</strong>
-                </div>
-                <input
-                  id="proy-aport"
-                  type="range"
-                  min="0"
-                  max="4000"
-                  step="50"
-                  [ngModel]="proyAport()"
-                  (ngModelChange)="proyAport.set(+$event)"
-                />
-              </div>
-            </div>
-
-            <div class="proy-resumen">
-              <div class="proy-kpi">
-                <span>Patrimonio estimado</span>
-                <strong class="mono gold valor-privado">{{ fmt.eur(datosProyeccion().finalTotal, 0) }}</strong>
-              </div>
-              <div class="proy-kpi">
-                <span>Aportado por ti</span>
-                <strong class="mono valor-privado">{{ fmt.eur(datosProyeccion().finalAportado, 0) }}</strong>
-              </div>
-              <div class="proy-kpi">
-                <span>Interés compuesto generado</span>
-                <strong class="mono pos valor-privado">+{{ fmt.eur(datosProyeccion().ganancia, 0) }}</strong>
-              </div>
-            </div>
-
-            <cap-svg-chart [renderFn]="renderProyeccionFn()" [minHeight]="200" />
-          </section>
+          <cap-proyeccion-card
+            [patrimonioActual]="patrimonioMostrado()"
+            [objetivo]="d.objetivo || null"
+            [ritmoMensualSugerido]="d.total?.ritmoMensual || 300"
+            [carteraVacia]="store.carteraVacia()"
+            [(proyRent)]="proyRent"
+          />
         </div>
 
         <!-- TABLA HISTÓRICA DE APORTACIONES -->
-        <section class="panel-card bloque-seccion">
-          <div class="card-header">
-            <div>
-              <h2 class="card-title">Registro histórico de compras y aportaciones</h2>
-              <p class="card-sub">
-                {{ filasAportacionesFiltradas().length }} operaciones · Total
-                <span class="valor-privado">{{ fmt.eur(sumaAportacionesFiltradas(), 2) }}</span>
-              </p>
-            </div>
-            <div class="controles-tabla">
-              <select
-                class="input-select"
-                [ngModel]="filtroProdTabla()"
-                (ngModelChange)="filtroProdTabla.set($event)"
-                aria-label="Filtrar por producto"
-              >
-                <option value="todos">Todos los productos</option>
-                @for (p of d.productos; track p.id) {
-                  <option [value]="p.id">{{ p.nombre }}</option>
-                }
-              </select>
-
-              <div class="seg-group">
-                <button
-                  type="button"
-                  class="seg-btn"
-                  [class.on]="ordenTabla() === 'fecha'"
-                  (click)="ordenTabla.set('fecha')"
-                >
-                  Recientes
-                </button>
-                <button
-                  type="button"
-                  class="seg-btn"
-                  [class.on]="ordenTabla() === 'importe'"
-                  (click)="ordenTabla.set('importe')"
-                >
-                  Mayor importe
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div class="tabla-scroll">
-            <table class="tabla-datos">
-              <thead>
-                <tr>
-                  <th>Fecha</th>
-                  <th>Producto</th>
-                  <th class="num">Unidades / Part.</th>
-                  <th class="num">Precio unitario</th>
-                  <th class="num">Importe</th>
-                </tr>
-              </thead>
-              <tbody>
-                @for (f of filasAportacionesFiltradas().slice(0, limiteFilas()); track $index) {
-                  <tr>
-                    <td class="mono">{{ fmt.fechaCorta(f.fecha) }}</td>
-                    <td>
-                      <span class="dot" [style.background]="f.color"></span>
-                      {{ f.prodNombre }}
-                    </td>
-                    <td class="num mono">
-                      {{ f.participaciones ? fmt.num(f.participaciones, 4) : '—' }}
-                    </td>
-                    <td class="num mono valor-privado">
-                      {{ f.precio ? fmt.eur(f.precio, 2) : '—' }}
-                    </td>
-                    <td class="num mono valor-privado" [class.pos]="f.esPasivo">
-                      {{ fmt.eur(f.importe, 2) }}
-                    </td>
-                  </tr>
-                } @empty {
-                  <tr>
-                    <td colspan="5" class="vacio-celda">No hay aportaciones registradas para este filtro.</td>
-                  </tr>
-                }
-              </tbody>
-            </table>
-          </div>
-
-          @if (filasAportacionesFiltradas().length > limiteFilas()) {
-            <div class="tabla-pie-mas">
-              <button type="button" class="btn-secundario btn-sm" (click)="limiteFilas.set(limiteFilas() + 50)">
-                Mostrar más operaciones ({{ filasAportacionesFiltradas().length - limiteFilas() }} restantes)
-              </button>
-            </div>
-          }
-        </section>
+        <cap-tabla-aportaciones />
       }
 
       <!-- MODAL EDITAR OBJETIVO (COMPONENTE SEPARADO) -->
@@ -916,14 +640,6 @@ export class PatrimonioTabComponent {
   readonly fmt = inject(FormatService);
   private readonly chart = inject(ChartService);
   private readonly router = inject(Router);
-  protected readonly Math = Math;
-
-  readonly saludo = computed(() => {
-    const u = this.store.usuario();
-    if (!u) return '';
-    const nombre = (u.nombre || '').trim() || u.email.split('@')[0];
-    return nombre ? `Hola, ${nombre}` : '';
-  });
 
   readonly vistasEvolucion: { id: VistaEvolucionId; etiqueta: string }[] = [
     { id: 'apilado', etiqueta: 'Apilado' },
@@ -948,16 +664,8 @@ export class PatrimonioTabComponent {
     { id: 'tipo', etiqueta: 'Vehículo' },
   ];
 
-  // Projection simulator signals
-  readonly proyAnos = signal<number>(10);
+  // Expected projection return rate (bound to ProyeccionCardComponent)
   readonly proyRent = signal<number>(7);
-  readonly proyAport = signal<number>(500);
-  private proyInicializado = false;
-
-  // Contributions table state
-  readonly filtroProdTabla = signal<string>('todos');
-  readonly ordenTabla = signal<'fecha' | 'importe'>('fecha');
-  readonly limiteFilas = signal<number>(30);
   readonly gruposExpandidos = signal<Set<string>>(new Set());
 
   readonly logosFallidos = signal<Set<string>>(new Set());
@@ -1050,17 +758,8 @@ export class PatrimonioTabComponent {
     return mapa;
   });
 
-  // Goal modal fields
   constructor() {
     void this.store.cargarBancosIniciales();
-    effect(() => {
-      const d = this.store.datos();
-      if (d?.total && !this.proyInicializado && !this.store.carteraVacia()) {
-        this.proyInicializado = true;
-        const ritmoRedondeado = Math.round((d.total?.ritmoMensual || 300) / 50) * 50;
-        this.proyAport.set(Math.min(4000, Math.max(0, ritmoRedondeado)));
-      }
-    });
   }
 
   logoEntidad(entidad?: string | null): string | null {
@@ -1110,28 +809,6 @@ export class PatrimonioTabComponent {
     const plus = this.plusvaliaMostrada();
     if (m.aportado <= 0 || plus === null) return null;
     return plus / m.aportado;
-  });
-
-  readonly progresoObjetivoPct = computed<number>(() => {
-    const obj = this.store.datos()?.objetivo;
-    if (!obj || obj.importe <= 0) return 0;
-    return Math.min(100, Math.max(0, (this.patrimonioMostrado() / obj.importe) * 100));
-  });
-
-  readonly faltaObjetivo = computed<number>(() => {
-    const obj = this.store.datos()?.objetivo;
-    if (!obj) return 0;
-    return Math.max(0, obj.importe - this.patrimonioMostrado());
-  });
-
-  readonly estimacionObjetivoTexto = computed<string>(() => {
-    const falta = this.faltaObjetivo();
-    const ritmo = this.store.datos()?.total?.ritmoMensual || 0;
-    if (falta <= 0 || ritmo <= 0) return '';
-    const meses = Math.ceil(falta / ritmo);
-    if (meses < 12) return `~${meses} meses al ritmo actual`;
-    const anos = (meses / 12).toFixed(1).replace('.0', '');
-    return `~${anos} años al ritmo actual`;
   });
 
   readonly hayLargoPlazo = computed<boolean>(() => {
@@ -1466,108 +1143,9 @@ export class PatrimonioTabComponent {
       this.chart.barrasApiladas(el, {
         categorias: am.meses,
         series,
-        altura: 250,
+        altura: 300,
       });
     };
-  });
-
-  porcentajeHito(importe: number): number {
-    const pat = this.patrimonioMostrado();
-    if (importe <= 0) return 0;
-    return Math.min(100, Math.max(0, (pat / importe) * 100));
-  }
-
-  readonly anioFuturo = computed<number>(() => {
-    return new Date().getFullYear() + this.proyAnos();
-  });
-
-  readonly datosProyeccion = computed(() => {
-    const actual = Math.max(0, this.patrimonioMostrado());
-    const anos = this.proyAnos();
-    const rAnual = this.proyRent() / 100;
-    const rMes = Math.pow(1 + rAnual, 1 / 12) - 1;
-    const aportMes = this.proyAport();
-    const meses = anos * 12;
-
-    const fechas: string[] = [];
-    const serieTotal: number[] = [];
-    const serieAport: number[] = [];
-
-    const hoy = new Date();
-    let saldo = actual;
-    let aportado = actual;
-
-    for (let m = 0; m <= meses; m++) {
-      const f = new Date(hoy.getFullYear(), hoy.getMonth() + m, 1);
-      fechas.push(f.toISOString().slice(0, 10));
-      serieTotal.push(saldo);
-      serieAport.push(aportado);
-      saldo = saldo * (1 + rMes) + aportMes;
-      aportado += aportMes;
-    }
-
-    const finalTotal = serieTotal[serieTotal.length - 1] || actual;
-    const finalAportado = serieAport[serieAport.length - 1] || actual;
-    return {
-      fechas,
-      serieTotal,
-      serieAport,
-      finalTotal,
-      finalAportado,
-      ganancia: finalTotal - finalAportado,
-    };
-  });
-
-  readonly renderProyeccionFn = computed<ChartRenderFn>(() => {
-    const p = this.datosProyeccion();
-    const tema = this.store.tema();
-    void tema;
-    return (el: HTMLElement) => {
-      this.chart.lineaConEventos(el, {
-        fechas: p.fechas,
-        valores: p.serieTotal,
-        secundaria: p.serieAport,
-        etiquetaPri: 'Patrimonio proyectado',
-        etiquetaSec: 'Capital aportado',
-        color: ['#f59e0b', '#d97706'],
-        altura: 200,
-      });
-    };
-  });
-
-  readonly filasAportacionesFiltradas = computed<FilaAportacionTabla[]>(() => {
-    const comps = this.store.visibles();
-    const filtro = this.filtroProdTabla();
-    const orden = this.ordenTabla();
-    const filas: FilaAportacionTabla[] = [];
-
-    for (const c of comps) {
-      if (filtro !== 'todos' && c.id !== filtro) continue;
-      for (const a of c.aportaciones || []) {
-        filas.push({
-          fecha: a.fecha,
-          importe: a.importe,
-          participaciones: a.participaciones,
-          precio: a.precio,
-          prodId: c.id,
-          prodNombre: c.nombre,
-          color: this.colorPrimario(c),
-          etqPrecio: c.etqPrecio || 'Precio',
-          esPasivo: c.tipoClave === 'deuda',
-        });
-      }
-    }
-
-    if (orden === 'importe') {
-      filas.sort((a, b) => Math.abs(b.importe) - Math.abs(a.importe));
-    } else {
-      filas.sort((a, b) => b.fecha.localeCompare(a.fecha));
-    }
-    return filas;
-  });
-
-  readonly sumaAportacionesFiltradas = computed<number>(() => {
-    return this.filasAportacionesFiltradas().reduce((s, f) => s + f.importe, 0);
   });
 
   abrirModalObjetivo(): void {

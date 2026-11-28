@@ -1,4 +1,4 @@
-import { Component, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { IconComponent } from '../icon/icon.component';
 
 interface PreguntaAyuda {
@@ -9,6 +9,7 @@ interface PreguntaAyuda {
 
 @Component({
   selector: 'cap-ayuda-tab',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   template: `
     <div class="dos-columnas bloque-seccion">

@@ -1,0 +1,249 @@
+/* ==========================================================================
+   SVG CHART ELEMENT STYLES & TOOLTIPS (ChartService)
+   ========================================================================== */
+
+.envGraf {
+  position: relative;
+  width: 100%;
+  overflow: visible;
+}
+
+svg.grafico,
+svg.spark {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.grafico .rejilla {
+  stroke: var(--border);
+  stroke-dasharray: 3 3;
+  stroke-width: 1;
+}
+
+.grafico .eje {
+  stroke: var(--border-strong);
+  stroke-width: 1;
+}
+
+.grafico .ejeX,
+.grafico .ejeY {
+  fill: var(--muted);
+  font-family: var(--font-num);
+  font-size: 10.5px;
+}
+
+.grafico .ejeY {
+  text-anchor: end;
+}
+
+.grafico .overlay {
+  stroke: var(--muted);
+  stroke-width: 1.8;
+  stroke-dasharray: 5 4;
+}
+
+.grafico .referencia {
+  stroke: var(--gold);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 4;
+}
+
+.grafico .refEtiqueta {
+  fill: var(--gold);
+  font-family: var(--font-num);
+  font-size: 10.5px;
+  font-weight: 600;
+}
+
+.grafico .crosshair {
+  stroke: var(--txt-2);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  opacity: 0.7;
+}
+
+.grafico .punto {
+  stroke: var(--surface);
+  stroke-width: 2;
+}
+
+.grafico .marcador {
+  stroke: var(--surface);
+  stroke-width: 1.5;
+}
+
+.grafico .marcador.aro {
+  stroke: #ffffff;
+  stroke-width: 2.2;
+}
+
+.grafico .resalte {
+  fill: rgba(148, 163, 184, 0.08);
+}
+
+.grafico .barValArriba,
+.grafico .barVal {
+  fill: var(--txt);
+  font-family: var(--font-num);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.grafico .barEtq {
+  fill: var(--txt-2);
+  font-size: 11.5px;
+  font-weight: 500;
+}
+
+.grafico .arco {
+  stroke: var(--surface);
+  stroke-width: 2;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.15s;
+}
+
+.grafico .arco.act {
+  opacity: 0.88;
+}
+
+.grafico .donutEtiqueta {
+  fill: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+}
+
+.grafico .donutValor {
+  fill: var(--txt);
+  font-family: var(--font-num);
+  font-size: 17px;
+  font-weight: 700;
+}
+
+.gtt {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  z-index: 60;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r-md);
+  padding: 0.55rem 0.75rem;
+  font-size: 0.76rem;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.32);
+  min-width: 185px;
+  max-width: min(320px, calc(100vw - 24px));
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+
+.gtt.on {
+  opacity: 1;
+}
+
+.gtt-fecha {
+  font-weight: 700;
+  color: var(--txt);
+  margin-bottom: 0.3rem;
+  padding-bottom: 0.2rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.gtt-fila {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.1rem 0;
+}
+
+.gtt-dot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+}
+
+.gtt-total {
+  margin-top: 0.25rem;
+  padding-top: 0.25rem;
+  border-top: 1px solid var(--border);
+  font-weight: 700;
+}
+
+.gtt b {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin-bottom: 0.15rem;
+}
+
+.gtt .ttTotal {
+  font-family: var(--font-num);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--txt);
+  margin-bottom: 0.3rem;
+}
+
+.gtt .ttEvento {
+  font-size: 0.74rem;
+  color: var(--gold);
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.gtt table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.gtt td {
+  padding: 0.12rem 0;
+}
+
+.gtt td:first-child {
+  max-width: 195px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.gtt td:last-child {
+  text-align: right;
+  font-family: var(--font-num);
+  font-weight: 600;
+  padding-left: 0.85rem;
+  white-space: nowrap;
+}
+
+.gtt i {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  margin-right: 0.35rem;
+  vertical-align: middle;
+}
+
+.gtt i.raya {
+  width: 10px;
+  height: 2px;
+  border-radius: 0;
+  background: var(--muted);
+}
+
+.gtt tr.sep td {
+  border-top: 1px solid var(--border);
+  padding-top: 0.25rem;
+  margin-top: 0.15rem;
+}

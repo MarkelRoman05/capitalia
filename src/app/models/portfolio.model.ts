@@ -38,6 +38,25 @@ export interface ExposicionIndice {
   top10?: [string, number][];
 }
 
+export interface DesgloseFx {
+  moneda: string;
+  fxCompraMedio: number;
+  fxActual: number;
+  variacionFxPct: number;
+  plusvaliaTotalEur: number;
+  efectoActivoEur: number;
+  efectoDivisaEur: number;
+  efectoActivoPct: number;
+  efectoDivisaPct: number;
+}
+
+export interface DesgloseFxTotal {
+  numProductos: number;
+  plusvaliaTotalEur: number;
+  efectoActivoEur: number;
+  efectoDivisaEur: number;
+}
+
 export interface ProductoCalculado {
   id: string;
   nombre: string;
@@ -90,6 +109,7 @@ export interface ProductoCalculado {
   ventanas?: Record<string, number | null>;
   tramos?: TramosAportacion;
   exposicion?: ExposicionIndice;
+  desgloseFx?: DesgloseFx;
 }
 
 export interface GrupoAgrupado {
@@ -145,6 +165,8 @@ export interface LineaComision {
   valor: number;
   anual: number;
   color: [string, string];
+  impacto10a?: number;
+  impacto20a?: number;
 }
 
 export interface ComisionesDatos {
@@ -153,6 +175,9 @@ export interface ComisionesDatos {
   base: number;
   terPonderado: number | null;
   compraventaPagada: number;
+  impacto10a?: number;
+  impacto20a?: number;
+  tasaReferencia?: number;
 }
 
 export interface RentabilidadAnual {
@@ -183,12 +208,17 @@ export interface ResumenMensual {
 }
 
 export interface MetricasIndice {
-  rentTotal: number;
+  rentTotal: number | null;
   cagr: number | null;
   vol: number | null;
   sharpe: number | null;
+  sortino?: number | null;
+  beta?: number | null;
+  alfa?: number | null;
   maxDD: number;
   maxDDFecha: string | null;
+  maxDiasRecuperacion?: number | null;
+  rfUsado?: number | null;
   desde: string;
   hasta: string;
 }
@@ -230,6 +260,245 @@ export interface VivoDatos {
   fechaRef: string;
 }
 
+export interface XRayEmpresa {
+  nombre: string;
+  peso: number;
+  productos: string[];
+  solapado: boolean;
+}
+
+export interface XRayDatos {
+  paises: [string, number][];
+  sectores: [string, number][];
+  topEmpresas: XRayEmpresa[];
+  coberturaExpoPct: number;
+  divisas: [string, number][];
+  alertas: string[];
+  desgloseFxTotal?: DesgloseFxTotal;
+}
+
+export interface SaludFinanciera {
+  liquidez: number;
+  deudaTotal: number;
+  activosBrutos: number;
+  ratioDeuda: number;
+  gastoMensual: number | null;
+  mesesColchon: number | null;
+}
+
+export interface FilaHeatmapMensual {
+  ano: string;
+  meses: (number | null)[];
+  total: number | null;
+}
+
+export interface PuntoDispersion {
+  id: string;
+  nombre: string;
+  color: string;
+  valor: number;
+  peso: number;
+  cagr: number;
+  vol: number;
+  sharpe: number | null;
+  sortino?: number | null;
+  maxDD: number;
+}
+
+export interface EscenarioEstres {
+  id: string;
+  nombre: string;
+  descripcion: string;
+  impactoEur: number;
+  caidaPct: number;
+  patrimonioResultante: number;
+}
+
+export interface OperacionFiscal {
+  fecha: string;
+  anio: string;
+  productoId: string;
+  productoNombre: string;
+  tipoClave: string;
+  unidades: number;
+  importeVenta: number;
+  costeFifo: number;
+  plusvalia: number;
+  fechaAdquisicionMin: string | null;
+  diasTenencia: number | null;
+}
+
+export interface ResumenFiscalAnual {
+  anio: string;
+  ganancias: number;
+  perdidas: number;
+  saldoGananciasPerdidas: number;
+  dividendosBrutos: number;
+  retenciones: number;
+  compensacionAplicada: number;
+  baseAhorroNeta: number;
+  impuestoEstimado: number;
+  cuotaDiferencial: number;
+  operaciones: OperacionFiscal[];
+}
+
+export interface PlusvaliaLatenteFiscal {
+  bruta: number;
+  impuestoSiLiquidaHoy: number;
+  patrimonioNetoFiscal: number;
+}
+
+export interface OportunidadTLH {
+  id: string;
+  nombre: string;
+  valor: number;
+  aportado: number;
+  minusvaliaLatente: number;
+  ahorroFiscalEstimado: number;
+  avisoRegla2Meses: boolean;
+}
+
+export interface FiscalidadDatos {
+  porAnio: ResumenFiscalAnual[];
+  plusvaliaLatente: PlusvaliaLatenteFiscal;
+  taxLossHarvesting: OportunidadTLH[];
+}
+
+export interface DividendoMes {
+  mes: string;
+  bruto: number;
+  neto: number;
+}
+
+export interface DividendoAnio {
+  anio: string;
+  bruto: number;
+  neto: number;
+}
+
+export interface DividendoProducto {
+  id: string;
+  nombre: string;
+  color: string;
+  bruto: number;
+  neto: number;
+  yieldActual: number | null;
+  yieldOnCost: number | null;
+}
+
+export interface IngresosPasivosResumen {
+  anualTotal: number;
+  dividendos12m: number;
+  interesesRentaFija: number;
+  alquileresAnuales: number;
+  mediaMensual: number;
+}
+
+export interface ProximoCobro {
+  fecha: string;
+  mes: string;
+  productoId: string;
+  productoNombre: string;
+  tipo: 'dividendo' | 'cupon' | 'vencimiento' | 'alquiler';
+  importeEstimado: number;
+  confianza: 'estimado' | 'contractual';
+  nota?: string;
+}
+
+export interface ProximoCobroMes {
+  mes: string;
+  total: number;
+  dividendos: number;
+  intereses: number;
+  alquileres: number;
+}
+
+export interface DividendosDatos {
+  totalHistorico: number;
+  totalNetoHistorico: number;
+  anioActual: number;
+  ultimos12Meses: number;
+  mediaMensual12m: number;
+  yieldCartera: number;
+  yieldOnCost: number;
+  porMes: DividendoMes[];
+  porAnio: DividendoAnio[];
+  porProducto: DividendoProducto[];
+  ingresosPasivos?: IngresosPasivosResumen;
+  proximosCobros?: ProximoCobro[];
+  proximosCobrosPorMes?: ProximoCobroMes[];
+}
+
+export interface ItemRentaFija {
+  id: string;
+  nombre: string;
+  valor: number;
+  tae: number | null;
+  cuponAnual: number | null;
+  frecuenciaCupon: string | null;
+  fechaEmision: string | null;
+  fechaVencimiento: string | null;
+  diasRestantes: number | null;
+  proximoVencimiento: boolean;
+  interesAnualEstimado: number | null;
+}
+
+export interface ItemPension {
+  id: string;
+  nombre: string;
+  valor: number;
+  aportadoAnioActual: number;
+  limiteAnual: number;
+  margenRestante: number;
+  tipoMarginalIrpf: number | null;
+  ahorroFiscalEstimado: number | null;
+}
+
+export interface ResumenPensiones {
+  items: ItemPension[];
+  totalAportadoAnio: number;
+  totalLimiteAnual: number;
+  totalMargenRestante: number;
+  totalAhorroEstimado: number | null;
+}
+
+export interface HipotecaResumen {
+  id: string;
+  nombre: string;
+  deudaPendiente: number;
+  tipoInteres: number | null;
+  tipoTasa: 'fijo' | 'variable' | string | null;
+  cuotaMensual: number | null;
+  fechaVencimiento: string | null;
+}
+
+export interface InmuebleResumen {
+  id: string;
+  nombre: string;
+  valorInmueble: number;
+  deudaPendiente: number;
+  equityNeto: number;
+  porcentajePagado: number;
+  ltv: number;
+  alquilerMensual: number | null;
+  gastosAnuales: number | null;
+  interesesHipotecaAnuales?: number;
+  rentabilidadBruta: number | null;
+  rentabilidadNeta: number | null;
+  rentabilidadNetaConHipoteca?: number | null;
+  cashflowAnualNeto?: number | null;
+  hipotecas: HipotecaResumen[];
+}
+
+export interface EspecializadosDatos {
+  rentaFija: ItemRentaFija[];
+  pensiones: ResumenPensiones;
+  inmobiliario: {
+    inmuebles: InmuebleResumen[];
+    hipotecasSueltas: HipotecaResumen[];
+  };
+}
+
 export interface DatosPanel {
   generado: string;
   modo?: 'propio' | 'demo' | 'estatico';
@@ -250,6 +519,15 @@ export interface DatosPanel {
   comparador: ComparadorCartera[];
   comparacion: ComparacionIndexado | null;
   indiceCartera: (number | null)[];
+  serieDrawdown?: (number | null)[];
+  heatmapMensual?: FilaHeatmapMensual[];
+  dispersionActivos?: PuntoDispersion[];
+  xray?: XRayDatos | null;
+  salud?: SaludFinanciera | null;
+  estres?: EscenarioEstres[];
+  fiscalidad?: FiscalidadDatos | null;
+  dividendos?: DividendosDatos | null;
+  especializados?: EspecializadosDatos | null;
   vivo: VivoDatos | null;
   avisos: string[];
 }
@@ -277,6 +555,19 @@ export interface ProductoCfg {
   respaldoMoneda?: string;
   vivo?: string;
   papel?: string;
+  tae?: number | null;
+  cuponAnual?: number | null;
+  frecuenciaCupon?: 'vencimiento' | 'anual' | 'semestral' | 'trimestral' | string | null;
+  fechaEmision?: string | null;
+  fechaVencimiento?: string | null;
+  limiteAnual?: number | null;
+  tipoMarginalIrpf?: number | null;
+  tipoInteres?: number | null;
+  tipoTasa?: 'fijo' | 'variable' | string | null;
+  cuotaMensual?: number | null;
+  inmuebleId?: string | null;
+  alquilerMensual?: number | null;
+  gastosAnuales?: number | null;
 }
 
 export interface LineaLoteCartera {
@@ -297,10 +588,13 @@ export interface MovimientoCfg {
   id: string;
   fecha: string;
   producto: string;
-  tipo: 'compra' | 'venta' | 'dividendo' | 'comision';
+  tipo: 'compra' | 'venta' | 'dividendo' | 'comision' | 'traspaso';
   unidades: number;
   importe: number;
   comision?: number | null;
+  productoDestino?: string;
+  unidadesDestino?: number;
+  retencion?: number | null;
   nota?: string;
   origen?: string;
 }
@@ -321,6 +615,7 @@ export interface CarteraConfig {
   valoraciones: ValoracionCfg[];
   hitos?: number[];
   objetivo?: ObjetivoPatrimonio;
+  gastoMensual?: number | null;
 }
 
 export interface CotizacionAlternativa {

@@ -1,4 +1,4 @@
-import { Component, computed, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
@@ -20,6 +20,7 @@ interface FilaDetalleMes {
 
 @Component({
   selector: 'cap-mes-tab',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, SvgChartComponent, IconComponent],
   template: `
     @if (store.datos(); as d) {

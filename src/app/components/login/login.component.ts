@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
@@ -7,6 +7,7 @@ import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'cap-login',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, RouterLink, LogoComponent, IconComponent],
   template: `
     <div class="auth-screen">

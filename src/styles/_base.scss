@@ -1,0 +1,126 @@
+/* ==========================================================================
+   BASE, TIPOGRAFÍA, ACCESIBILIDAD Y MODO DISCRETO
+   ========================================================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  overflow-x: clip;
+  background-color: var(--bg);
+  background-image: var(--bg-grad);
+  background-attachment: fixed;
+  color: var(--txt);
+  font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.55;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+h4,
+.card-title,
+.seccion-titulo,
+.ficha-titulo,
+.mes-titulo {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  font-weight: 700;
+}
+
+.mono,
+.num {
+  font-family: var(--font-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.pos {
+  color: var(--pos) !important;
+}
+
+.neg {
+  color: var(--neg) !important;
+}
+
+.gold {
+  color: var(--gold) !important;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.num {
+  text-align: right;
+}
+
+@keyframes giro {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.girando {
+  display: inline-block;
+  animation: giro 0.9s linear infinite;
+  transform-origin: center;
+}
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------- Modo discreto (Privacidad de cifras monetarias) ---------- */
+.valor-privado {
+  transition: filter 0.18s ease;
+}
+
+html[data-privado='1'] .valor-privado,
+html[data-privado='1'] .valor-privado:hover {
+  filter: blur(8px);
+  user-select: none;
+}
+
+html[data-privado='1'] .kpi-val.valor-privado,
+html[data-privado='1'] .kpi-val.valor-privado:hover {
+  filter: blur(11px);
+}
+
+html[data-privado='1'] .mes-cifra.valor-privado,
+html[data-privado='1'] .mes-cifra.valor-privado:hover,
+html[data-privado='1'] .ficha-cifra.valor-privado,
+html[data-privado='1'] .ficha-cifra.valor-privado:hover {
+  filter: blur(16px);
+}
+
+html[data-privado='1'] .hero-cifra.valor-privado,
+html[data-privado='1'] .hero-cifra.valor-privado:hover {
+  filter: blur(26px);
+  opacity: 0.78;
+}
+
+@media (max-width: 900px) {
+  html,
+  body {
+    background-attachment: scroll;
+  }
+}

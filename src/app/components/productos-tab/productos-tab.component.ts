@@ -1,11 +1,18 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
+import { NgTemplateOutlet } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { FormatService } from '../../services/format.service';
 import { ChartRenderFn, ChartService } from '../../services/chart.service';
 import { SvgChartComponent } from '../svg-chart/svg-chart.component';
 import { IconComponent } from '../icon/icon.component';
-import { ProductoCalculado } from '../../models/portfolio.model';
+import { EspecializadosDatos, ProductoCalculado } from '../../models/portfolio.model';
+import { EspecializadosPanelComponent } from './especializados-panel.component';
+import {
+  calcularRebalanceoAportacion,
+  RebalanceoResultado,
+} from '../../services/portfolio-metrics.util';
 
 interface SelectorGrupoProductos {
   esGrupo: true;
@@ -30,10 +37,18 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
 
 @Component({
   selector: 'cap-productos-tab',
-  imports: [SvgChartComponent, IconComponent, RouterLink],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    FormsModule,
+    NgTemplateOutlet,
+    SvgChartComponent,
+    IconComponent,
+    RouterLink,
+    EspecializadosPanelComponent,
+  ],
   template: `
     @if (store.datos(); as d) {
-      @if (!d.productos || !d.productos.length) {
+      @if (!d.productos?.length && !hayEspecializados(d.especializados)) {
         <section class="panel-card vacio-bloque">
           <h2>No hay fondos, ETFs ni acciones con seguimiento de compras</h2>
           <p>Ve a la pestaña «Mis datos» para añadir tus primeros productos de inversión.</p>
@@ -41,65 +56,106 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
             Ir a Mis datos
           </a>
         </section>
-      } @else {
+      }
+      @if (d.productos?.length) {
         <!-- SELECTOR DE PRODUCTO Y CARTERAS AGRUPADAS -->
-        <section class="barra-filtro" aria-label="Seleccionar producto o cartera de inversión">
-          @for (el of elementosSelector(); track el.esGrupo ? 'grp-' + el.grupoId : el.comp.id) {
-            @if (el.esGrupo) {
-              <button
-                type="button"
-                class="pill"
-                [class.on]="grupoActivo()?.grupoId === el.grupoId && !productoActivo()"
-                (click)="seleccionarGrupo(el.grupoId)"
-              >
-                <span class="dot" [style.background]="el.color"></span>
-                <span>{{ el.nombre }} ({{ el.miembros.length }})</span>
-                <span class="pill-val valor-privado">{{ fmt.eurCompacto(el.valor) }}</span>
-              </button>
-            } @else {
-              <button
-                type="button"
-                class="pill"
-                [class.on]="!grupoActivo() && productoActivo()?.id === el.comp.id"
-                (click)="seleccionarProducto(el.comp.id)"
-              >
-                <span class="dot" [style.background]="colorPrimario(el.comp)"></span>
-                <span>{{ el.comp.corto || el.comp.nombre }}</span>
-                <span class="pill-val valor-privado">
-                  {{ fmt.eurCompacto(store.valorProductoConVivo(el.comp)) }}
-                </span>
-              </button>
+        <section class="prod-switcher bloque-seccion" aria-label="Seleccionar producto o cartera de inversión">
+          <div class="prod-rail" role="tablist" aria-label="Productos y carteras">
+            @for (el of elementosSelector(); track el.esGrupo ? 'grp-' + el.grupoId : el.comp.id) {
+              @if (el.esGrupo) {
+                @let activoGrp = grupoActivo()?.grupoId === el.grupoId;
+                <button
+                  type="button"
+                  role="tab"
+                  class="prod-tab-card"
+                  [class.on]="activoGrp"
+                  [attr.aria-selected]="activoGrp"
+                  (click)="seleccionarGrupo(el.grupoId)"
+                >
+                  <span class="prod-tab-top">
+                    <span class="dot" [style.background]="el.color"></span>
+                    <span class="prod-tab-name">{{ el.nombre }}</span>
+                    <span class="prod-tab-badge">{{ el.miembros.length }}</span>
+                  </span>
+                  <span class="prod-tab-bottom">
+                    <strong class="prod-tab-val mono valor-privado">
+                      {{ fmt.eurCompacto(el.valor) }}
+                    </strong>
+                    @if (el.rentabilidad !== null && el.rentabilidad !== undefined) {
+                      <span
+                        class="prod-tab-rent mono"
+                        [class.pos]="fmt.claseSigno(el.rentabilidad) === 'pos'"
+                        [class.neg]="fmt.claseSigno(el.rentabilidad) === 'neg'"
+                      >
+                        {{ fmt.pctSigno(el.rentabilidad, 1) }}
+                      </span>
+                    }
+                  </span>
+                </button>
+              } @else {
+                @let comp = el.comp;
+                @let activoProd = !grupoActivo() && productoActivo()?.id === comp.id;
+                <button
+                  type="button"
+                  role="tab"
+                  class="prod-tab-card"
+                  [class.on]="activoProd"
+                  [attr.aria-selected]="activoProd"
+                  (click)="seleccionarProducto(comp.id)"
+                >
+                  <span class="prod-tab-top">
+                    <span class="dot" [style.background]="colorPrimario(comp)"></span>
+                    <span class="prod-tab-name">{{ comp.corto || comp.nombre }}</span>
+                  </span>
+                  <span class="prod-tab-bottom">
+                    <strong class="prod-tab-val mono valor-privado">
+                      {{ fmt.eurCompacto(store.valorProductoConVivo(comp)) }}
+                    </strong>
+                    @if (comp.rentabilidad !== null && comp.rentabilidad !== undefined) {
+                      <span
+                        class="prod-tab-rent mono"
+                        [class.pos]="fmt.claseSigno(comp.rentabilidad) === 'pos'"
+                        [class.neg]="fmt.claseSigno(comp.rentabilidad) === 'neg'"
+                      >
+                        {{ fmt.pctSigno(comp.rentabilidad, 1) }}
+                      </span>
+                    }
+                  </span>
+                </button>
+              }
             }
+          </div>
+
+          @if (grupoActivo(); as grp) {
+            <nav class="prod-subrail" aria-label="Productos incluidos en la cartera">
+              <div class="prod-subrail-list">
+                <button
+                  type="button"
+                  class="prod-sub-chip"
+                  [class.on]="!productoActivo()"
+                  (click)="seleccionarGrupo(grp.grupoId)"
+                >
+                  <span>Resumen cartera</span>
+                </button>
+                @for (m of grp.miembros; track m.id) {
+                  @let valM = store.valorProductoConVivo(m);
+                  <button
+                    type="button"
+                    class="prod-sub-chip"
+                    [class.on]="productoActivo()?.id === m.id"
+                    (click)="seleccionarProducto(m.id)"
+                  >
+                    <span class="dot" [style.background]="colorPrimario(m)"></span>
+                    <span class="prod-sub-chip-name">{{ m.corto || m.nombre }}</span>
+                    <span class="prod-sub-chip-val mono valor-privado">
+                      {{ fmt.eurCompacto(valM) }}
+                    </span>
+                  </button>
+                }
+              </div>
+            </nav>
           }
         </section>
-
-        @if (grupoActivo(); as grp) {
-          <nav class="productos-subbar" aria-label="Productos incluidos en la cartera">
-            <span class="productos-subbar-label">{{ grp.nombre }}:</span>
-            <button
-              type="button"
-              class="pill"
-              [class.on]="!productoActivo()"
-              (click)="seleccionarGrupo(grp.grupoId)"
-            >
-              <span>Resumen cartera</span>
-            </button>
-            @for (m of grp.miembros; track m.id) {
-              <button
-                type="button"
-                class="pill"
-                [class.on]="productoActivo()?.id === m.id"
-                (click)="seleccionarProducto(m.id)"
-              >
-                <span class="dot" [style.background]="colorPrimario(m)"></span>
-                <span>{{ m.corto || m.nombre }}</span>
-                <span class="pill-val valor-privado">
-                  {{ fmt.eurCompacto(store.valorProductoConVivo(m)) }}
-                </span>
-              </button>
-            }
-          </nav>
-        }
 
         @if (!productoActivo() && grupoActivo(); as grp) {
           <!-- VISTA CONSOLIDADA DE CARTERA AGRUPADA -->
@@ -188,6 +244,7 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
                     <th>Producto</th>
                     <th class="num">Peso objetivo</th>
                     <th class="num">Peso real</th>
+                    <th class="num">Desviación (Drift)</th>
                     <th class="num">Participaciones</th>
                     <th class="num">Valor actual</th>
                     <th class="num">Plusvalía</th>
@@ -198,6 +255,7 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
                   @for (m of grp.miembros; track m.id) {
                     @let valM = store.valorProductoConVivo(m);
                     @let pesoRealM = grp.valor > 0 ? valM / grp.valor : 0;
+                    @let driftM = driftGrupoMapa().get(m.id);
                     <tr>
                       <td>
                         <div class="celda-prod-nombre">
@@ -209,6 +267,26 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
                         {{ m.pesoObjetivo !== null && m.pesoObjetivo !== undefined ? fmt.num(m.pesoObjetivo, 1) + '%' : '—' }}
                       </td>
                       <td class="num mono">{{ grp.valor > 0 ? fmt.pct(pesoRealM, 1) : '—' }}</td>
+                      <td class="num mono">
+                        @if (driftM && driftM.pesoObjetivo !== null) {
+                          <div class="drift-celda">
+                            <span
+                              [class.pos]="driftM.driftActualPp > 0.05"
+                              [class.neg]="driftM.driftActualPp < -0.05"
+                            >
+                              {{ fmtPpSigno(driftM.driftActualPp) }}
+                            </span>
+                            <small class="muted valor-privado">
+                              ({{ fmt.eurSigno(driftM.driftActualEur, 0) }})
+                            </small>
+                            @if (Math.abs(driftM.driftActualPp) >= 5) {
+                              <span class="tag tag-alerta">≥ 5 pp</span>
+                            }
+                          </div>
+                        } @else {
+                          <span class="muted">—</span>
+                        }
+                      </td>
                       <td class="num mono">
                         {{ fmt.num(m.titulos ?? m.participaciones ?? 0, 4) }}
                       </td>
@@ -238,6 +316,17 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
               </table>
             </div>
           </section>
+
+          @if (grupoTieneObjetivos()) {
+            <ng-container
+              [ngTemplateOutlet]="rebalanceoTpl"
+              [ngTemplateOutletContext]="{
+                $implicit: filasRebalanceoGrupo(),
+                titulo: 'Asistente de rebalanceo por aportación (sin vender)',
+                contexto: 'grupo'
+              }"
+            />
+          }
         }
 
         @if (productoActivo(); as p) {
@@ -354,6 +443,56 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
                       </strong>
                     </div>
                   }
+                </div>
+              </div>
+            }
+
+            <!-- DESGLOSE EFECTO ACTIVO VS. EFECTO DIVISA (FX) -->
+            @if (p.desgloseFx; as fx) {
+              <div class="fx-atrib-box">
+                <div class="fx-atrib-head">
+                  <span class="ventanas-titulo">
+                    Atribución de plusvalía: Efecto activo vs. Efecto divisa ({{ fx.moneda }}/EUR)
+                  </span>
+                  <span class="tag mono">
+                    Cambio medio: {{ fmt.num(fx.fxCompraMedio, 4) }} → Actual: {{ fmt.num(fx.fxActual, 4) }}
+                    ({{ fmt.pctSigno(fx.variacionFxPct, 2) }})
+                  </span>
+                </div>
+                <div class="fx-atrib-grid">
+                  <div class="fx-atrib-item">
+                    <span>Efecto activo ({{ fx.moneda }})</span>
+                    <strong
+                      class="mono valor-privado"
+                      [class.pos]="fmt.claseSigno(fx.efectoActivoEur) === 'pos'"
+                      [class.neg]="fmt.claseSigno(fx.efectoActivoEur) === 'neg'"
+                    >
+                      {{ fmt.eurSigno(fx.efectoActivoEur, 2) }}
+                    </strong>
+                    <small class="muted mono">{{ fmt.pctSigno(fx.efectoActivoPct, 2) }} sobre coste</small>
+                  </div>
+                  <div class="fx-atrib-item">
+                    <span>Efecto divisa (FX)</span>
+                    <strong
+                      class="mono valor-privado"
+                      [class.pos]="fmt.claseSigno(fx.efectoDivisaEur) === 'pos'"
+                      [class.neg]="fmt.claseSigno(fx.efectoDivisaEur) === 'neg'"
+                    >
+                      {{ fmt.eurSigno(fx.efectoDivisaEur, 2) }}
+                    </strong>
+                    <small class="muted mono">{{ fmt.pctSigno(fx.efectoDivisaPct, 2) }} sobre coste</small>
+                  </div>
+                  <div class="fx-atrib-item">
+                    <span>Plusvalía total (EUR)</span>
+                    <strong
+                      class="mono valor-privado"
+                      [class.pos]="fmt.claseSigno(fx.plusvaliaTotalEur) === 'pos'"
+                      [class.neg]="fmt.claseSigno(fx.plusvaliaTotalEur) === 'neg'"
+                    >
+                      {{ fmt.eurSigno(fx.plusvaliaTotalEur, 2) }}
+                    </strong>
+                    <small class="muted">Efecto activo + efecto divisa</small>
+                  </div>
                 </div>
               </div>
             }
@@ -499,17 +638,127 @@ type SelectorElementoProductos = SelectorGrupoProductos | SelectorItemProducto;
               </table>
             </div>
           </section>
+
+          @if (!p.grupoId && filasRebalanceoSueltos().length) {
+            <ng-container
+              [ngTemplateOutlet]="rebalanceoTpl"
+              [ngTemplateOutletContext]="{
+                $implicit: filasRebalanceoSueltos(),
+                titulo: 'Distribución objetivo y rebalanceo por aportación (sin vender)',
+                contexto: 'sueltos'
+              }"
+            />
+          }
+        }
+      }
+
+      @if (d.especializados; as esp) {
+        @if (hayEspecializados(esp)) {
+          <cap-especializados-panel [especializados]="esp" />
         }
       }
     }
+
+    <ng-template #rebalanceoTpl let-filas let-titulo="titulo" let-contexto="contexto">
+      <section class="panel-card bloque-seccion">
+        <div class="card-header">
+          <div>
+            <h3 class="card-title">{{ titulo }}</h3>
+            <p class="card-sub">
+              Algoritmo water-filling: reparte tu próxima compra para acercarte al peso objetivo sin vender participaciones (0 peaje fiscal).
+            </p>
+          </div>
+          <div class="reb-control">
+            <label [for]="'reb-importe-' + contexto">Importe a aportar (€)</label>
+            <input
+              [id]="'reb-importe-' + contexto"
+              type="number"
+              min="0"
+              step="50"
+              [ngModel]="importeRebalanceo()"
+              (ngModelChange)="actualizarImporteRebalanceo($event)"
+            />
+          </div>
+        </div>
+
+        <div class="tabla-scroll">
+          <table class="tabla-datos">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th class="num">Objetivo</th>
+                <th class="num">Peso actual</th>
+                <th class="num">Drift actual</th>
+                <th class="num">Aportar (€)</th>
+                <th class="num">Nuevo peso</th>
+                <th class="num">Drift resultante</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (f of filas; track f.id) {
+                <tr>
+                  <td>
+                    <div class="celda-prod-nombre">
+                      <span class="dot" [style.background]="f.color"></span>
+                      <span>{{ f.nombre }}</span>
+                    </div>
+                  </td>
+                  <td class="num mono">
+                    {{ f.pesoObjetivo !== null ? fmt.num(f.pesoObjetivo, 1) + '%' : '—' }}
+                  </td>
+                  <td class="num mono">{{ fmt.num(f.pesoActualPct, 1) }}%</td>
+                  <td class="num mono">
+                    @if (f.pesoObjetivo !== null) {
+                      <div class="drift-celda">
+                        <span
+                          [class.pos]="f.driftActualPp > 0.05"
+                          [class.neg]="f.driftActualPp < -0.05"
+                        >
+                          {{ fmtPpSigno(f.driftActualPp) }}
+                        </span>
+                        <small class="muted valor-privado">
+                          ({{ fmt.eurSigno(f.driftActualEur, 0) }})
+                        </small>
+                        @if (Math.abs(f.driftActualPp) >= 5) {
+                          <span class="tag tag-alerta">≥ 5 pp</span>
+                        }
+                      </div>
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                  <td class="num mono valor-privado">
+                    <strong [class.pos]="f.aportar > 0">{{ fmt.eur(f.aportar, 2) }}</strong>
+                  </td>
+                  <td class="num mono">{{ fmt.num(f.nuevoPesoPct, 1) }}%</td>
+                  <td class="num mono">
+                    @if (f.pesoObjetivo !== null) {
+                      <span
+                        [class.pos]="Math.abs(f.driftResultantePp) < Math.abs(f.driftActualPp)"
+                      >
+                        {{ fmtPpSigno(f.driftResultantePp) }}
+                      </span>
+                    } @else {
+                      <span class="muted">—</span>
+                    }
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </ng-template>
   `,
 })
 export class ProductosTabComponent {
   readonly store = inject(PortfolioStoreService);
   readonly fmt = inject(FormatService);
   private readonly chart = inject(ChartService);
+  protected readonly Math = Math;
 
   readonly modoGraficoProd = signal<'valor' | 'vl'>('valor');
+  readonly importeRebalanceo = signal<number>(1000);
 
   readonly clavesVentanas = [
     { clave: '1m', etiqueta: '1 mes' },
@@ -784,5 +1033,61 @@ export class ProductosTabComponent {
     if (nivel === 3) return 'Extraordinaria';
     if (nivel === 1) return 'Pequeña';
     return 'Habitual';
+  }
+
+  actualizarImporteRebalanceo(val: number | string): void {
+    const num = Number(val);
+    this.importeRebalanceo.set(Number.isFinite(num) && num >= 0 ? num : 0);
+  }
+
+  fmtPpSigno(pp: number): string {
+    const signo = pp > 0.05 ? '+' : '';
+    return `${signo}${this.fmt.num(pp, 1)} pp`;
+  }
+
+  private construirRebalanceo(lista: ProductoCalculado[]): RebalanceoResultado[] {
+    return calcularRebalanceoAportacion(
+      lista.map((m) => ({
+        id: m.id,
+        nombre: m.corto || m.nombre,
+        color: this.colorPrimario(m),
+        valorActual: this.store.valorProductoConVivo(m),
+        pesoObjetivo: m.pesoObjetivo,
+      })),
+      this.importeRebalanceo()
+    );
+  }
+
+  readonly filasRebalanceoGrupo = computed<RebalanceoResultado[]>(() => {
+    const grp = this.grupoActivo();
+    if (!grp) return [];
+    return this.construirRebalanceo(grp.miembros);
+  });
+
+  readonly driftGrupoMapa = computed<Map<string, RebalanceoResultado>>(() => {
+    return new Map(this.filasRebalanceoGrupo().map((r) => [r.id, r]));
+  });
+
+  readonly grupoTieneObjetivos = computed<boolean>(() => {
+    const grp = this.grupoActivo();
+    return Boolean(grp?.miembros.some((m) => (m.pesoObjetivo ?? 0) > 0));
+  });
+
+  readonly filasRebalanceoSueltos = computed<RebalanceoResultado[]>(() => {
+    const sueltos = this.productosConColor().filter((p) => !p.grupoId);
+    const conObj = sueltos.filter((p) => (p.pesoObjetivo ?? 0) > 0);
+    if (!conObj.length) return [];
+    const sumaObj = conObj.reduce((s, p) => s + (p.pesoObjetivo || 0), 0);
+    return this.construirRebalanceo(sumaObj >= 95 ? conObj : sueltos);
+  });
+
+  hayEspecializados(esp?: EspecializadosDatos | null): boolean {
+    if (!esp) return false;
+    return Boolean(
+      esp.rentaFija?.length ||
+        esp.pensiones?.items?.length ||
+        esp.inmobiliario?.inmuebles?.length ||
+        esp.inmobiliario?.hipotecasSueltas?.length,
+    );
   }
 }

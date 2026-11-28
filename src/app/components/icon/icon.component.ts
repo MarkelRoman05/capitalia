@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 export type IconName =
   | 'close'
@@ -18,6 +18,7 @@ export type IconName =
 
 @Component({
   selector: 'cap-icon',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     ':host { display: inline-flex; align-items: center; justify-content: center; flex: none; line-height: 0; }',
   ],

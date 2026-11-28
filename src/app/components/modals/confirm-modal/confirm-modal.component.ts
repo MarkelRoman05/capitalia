@@ -1,9 +1,10 @@
-import { Component, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-confirm-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrarSiAbierto()',

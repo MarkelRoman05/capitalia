@@ -1,0 +1,70 @@
+/* ==========================================================================
+   TOKENS & TEMAS (CLARO / OSCURO)
+   ========================================================================== */
+
+:root {
+  --font-display: 'Bricolage Grotesque', 'Figtree', system-ui, sans-serif;
+  --font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-num: 'Figtree', system-ui, sans-serif;
+  --r-sm: 7px;
+  --r-md: 12px;
+  --r-lg: 18px;
+  --topbar-h: 60px;
+}
+
+/* Tema claro: papel marfil cálido y tinta índigo */
+:root,
+html[data-theme='claro'] {
+  color-scheme: light;
+  --bg: #f5f5f1;
+  --bg-grad: radial-gradient(ellipse 80% 45% at 50% -10%, rgba(43, 68, 204, 0.055), transparent 70%);
+  --surface: #ffffff;
+  --surface-2: #efefe9;
+  --surface-hover: #e6e6de;
+  --border: rgba(17, 20, 33, 0.09);
+  --border-strong: rgba(17, 20, 33, 0.2);
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  --txt: #14161f;
+  --txt-2: #3c4154;
+  --muted: #63697d;
+  --primary: #2b44cc;
+  --primary-hover: #2035a8;
+  --on-primary: #ffffff;
+  --gold: #8c5c04;
+  --pos: #127a47;
+  --pos-bg: rgba(18, 122, 71, 0.1);
+  --neg: #c22727;
+  --neg-bg: rgba(194, 39, 39, 0.09);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.04), 0 8px 24px rgba(15, 23, 42, 0.045);
+  --topbar-bg: rgba(245, 245, 241, 0.86);
+  --pitch-bg: #111521;
+  --pitch-txt: #b9c0d4;
+}
+
+/* Tema oscuro: obsidian entintado con profundidad editorial */
+html[data-theme='oscuro'] {
+  color-scheme: dark;
+  --bg: #0b0e16;
+  --bg-grad: radial-gradient(ellipse 80% 45% at 50% -10%, rgba(139, 158, 255, 0.08), transparent 70%);
+  --surface: #121622;
+  --surface-2: #191e2e;
+  --surface-hover: #21283c;
+  --border: rgba(226, 232, 248, 0.09);
+  --border-strong: rgba(226, 232, 248, 0.19);
+  --surface-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.045);
+  --txt: #f0f3fa;
+  --txt-2: #c6cce0;
+  --muted: #8f98b2;
+  --primary: #8b9eff;
+  --primary-hover: #a8b6ff;
+  --on-primary: #0b0e16;
+  --gold: #e5b567;
+  --pos: #3dd68c;
+  --pos-bg: rgba(61, 214, 140, 0.12);
+  --neg: #ff7373;
+  --neg-bg: rgba(255, 115, 115, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.24), 0 10px 28px rgba(0, 0, 0, 0.22);
+  --topbar-bg: rgba(11, 14, 22, 0.84);
+  --pitch-bg: #090c14;
+  --pitch-txt: #9da6be;
+}

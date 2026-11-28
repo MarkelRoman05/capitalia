@@ -1,7 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
 import { Router } from '@angular/router';
-import { firstValueFrom } from 'rxjs';
 import {
   CarteraConfig,
   CopiaSeguridad,
@@ -13,16 +11,17 @@ import {
   MovimientoCfg,
   ProductoCalculado,
   ProductoCfg,
-  RespuestaAuthYo,
   RespuestaBancos,
   RespuestaLoteProductos,
   ResultadoBusqueda,
-  Usuario,
   ValoracionCfg,
 } from '../models/portfolio.model';
+import { AuthService } from './auth.service';
 import { FormatService } from './format.service';
+import { PortfolioApiService } from './portfolio-api.service';
+import { calcularMetricasCartera, calcularXirr } from './portfolio-metrics.util';
 
-export type TabId = 'patrimonio' | 'mes' | 'fondos' | 'rendimiento' | 'datos' | 'ayuda';
+export type TabId = 'patrimonio' | 'mes' | 'fondos' | 'rendimiento' | 'fiscalidad' | 'datos';
 export type RangoId = '1m' | '3m' | '6m' | 'ytd' | '1a' | 'todo';
 export type VistaEvolucionId = 'apilado' | 'total' | 'dinero' | 'reparto';
 export type AgrupacionDistId = 'clase' | 'producto' | 'entidad' | 'tipo';
@@ -37,16 +36,17 @@ export interface ConfirmacionDialog {
 
 @Injectable({ providedIn: 'root' })
 export class PortfolioStoreService {
-  private readonly http = inject(HttpClient);
+  private readonly auth = inject(AuthService);
+  private readonly api = inject(PortfolioApiService);
   private readonly fmt = inject(FormatService);
   private readonly router = inject(Router);
   private initPromise: Promise<void> | null = null;
 
-  // Auth state
-  readonly cargandoInicial = signal<boolean>(true);
-  readonly autenticado = signal<boolean>(false);
-  readonly modoAuth = signal<'local' | 'nube'>('nube');
-  readonly usuario = signal<Usuario | null>(null);
+  // Auth state (delegated to AuthService)
+  readonly cargandoInicial = this.auth.cargandoInicial;
+  readonly autenticado = this.auth.autenticado;
+  readonly modoAuth = this.auth.modoAuth;
+  readonly usuario = this.auth.usuario;
 
   // Data state
   readonly datos = signal<DatosPanel | null>(null);
@@ -63,6 +63,7 @@ export class PortfolioStoreService {
   readonly confirmacionActiva = signal<ConfirmacionDialog | null>(null);
   readonly modalObjetivoAbierto = signal<boolean>(false);
   readonly modalPerfilAbierto = signal<boolean>(false);
+  readonly modalAyudaAbierto = signal<boolean>(false);
 
   // UI state
   readonly tabActiva = signal<TabId>('patrimonio');
@@ -301,153 +302,17 @@ export class PortfolioStoreService {
     return d.fechas.slice(this.desdeIdx());
   });
 
-  // Client-side XIRR calculation (exact Newton-Raphson + fallback bisection from app.js)
+  // Client-side XIRR calculation delegated to pure utility
   xirr(flujos: [string, number][]): number | null {
-    if (!flujos || flujos.length < 2) return null;
-    const tienePos = flujos.some((f) => f[1] > 0);
-    const tieneNeg = flujos.some((f) => f[1] < 0);
-    if (!tienePos || !tieneNeg) return null;
-
-    const t0 = new Date(flujos[0][0] + 'T00:00:00').getTime();
-    const puntos = flujos.map(([f, imp]) => [
-      (new Date(f + 'T00:00:00').getTime() - t0) / (86400000 * 365.25),
-      imp,
-    ]);
-
-    const npv = (r: number) =>
-      puntos.reduce((s, [t, cf]) => s + cf / Math.pow(1 + r, t), 0);
-    const dnpv = (r: number) =>
-      puntos.reduce(
-        (s, [t, cf]) => (t === 0 ? s : s - (t * cf) / Math.pow(1 + r, t + 1)),
-        0
-      );
-
-    let r = 0.1;
-    for (let i = 0; i < 100; i++) {
-      if (r <= -0.99) r = -0.99;
-      const f = npv(r);
-      if (Math.abs(f) < 1e-6) return r;
-      const df = dnpv(r);
-      if (Math.abs(df) < 1e-12) break;
-      const nr = r - f / df;
-      if (Math.abs(nr - r) < 1e-7) return nr;
-      r = Math.max(-0.99, Math.min(10, nr));
-    }
-    return null;
+    return calcularXirr(flujos);
   }
 
   calcularMetricas(lista: ProductoCalculado[]): MetricasCalculadas {
-    const d = this.datos();
-    const fechas = d?.fechas || [];
-    const n = fechas.length;
-    const serie = new Array<number>(n).fill(0);
-    const serieAportado = new Array<number>(n).fill(0);
-
-    let valor = 0;
-    let aportado = 0;
-    let valorConCoste = 0;
-    const flujos: [string, number][] = [];
-    let numAportaciones = 0;
-    const mesesConAportacion = new Set<string>();
-
-    for (const c of lista) {
-      valor += c.valor || 0;
-      if (c.aportado !== null && c.aportado !== undefined) {
-        aportado += c.aportado;
-        valorConCoste += c.valor;
-      }
-      for (let i = 0; i < n; i++) {
-        serie[i] += c.serie?.[i] || 0;
-        if (c.serieAportado) {
-          serieAportado[i] += c.serieAportado[i] || 0;
-        }
-      }
-      if (c.flujos && c.flujos.length) {
-        for (const fl of c.flujos) {
-          flujos.push(fl);
-        }
-      }
-      if (c.aportaciones && c.aportaciones.length) {
-        for (const a of c.aportaciones) {
-          if (a.importe > 0) {
-            numAportaciones++;
-            mesesConAportacion.add(a.fecha.slice(0, 7));
-          }
-        }
-      }
-    }
-
-    if (flujos.length && valorConCoste > 0 && n > 0) {
-      flujos.push([fechas[n - 1], valorConCoste]);
-      flujos.sort((a, b) => a[0].localeCompare(b[0]));
-    }
-
-    const plusvalia = aportado > 0 ? valorConCoste - aportado : null;
-    const rentabilidad =
-      aportado > 0 && plusvalia !== null ? plusvalia / aportado : null;
-    const tir =
-      lista.length === 1 && lista[0].tir !== undefined
-        ? lista[0].tir ?? null
-        : this.xirr(flujos);
-
-    let pico = 0;
-    let caida = 0;
-    let caidaFecha: string | null = null;
-    for (let i = 0; i < n; i++) {
-      if (serie[i] > pico) pico = serie[i];
-      if (pico > 0) {
-        const dd = (serie[i] - pico) / pico;
-        if (dd < caida) {
-          caida = dd;
-          caidaFecha = fechas[i];
-        }
-      }
-    }
-
-    let primerIdx = serie.findIndex((v) => v > 0);
-    if (primerIdx < 0) primerIdx = 0;
-    const dias =
-      n > 0
-        ? Math.max(
-            1,
-            (new Date(fechas[n - 1]).getTime() -
-              new Date(fechas[primerIdx]).getTime()) /
-              86400000
-          )
-        : 1;
-    const mesesActivos = Math.max(1, dias / 30.4375);
-    const ritmo = aportado > 0 ? aportado / mesesActivos : 0;
-
-    let racha = 0;
-    if (mesesConAportacion.size && n > 0) {
-      let [y, m] = fechas[n - 1].slice(0, 7).split('-').map(Number);
-      while (
-        mesesConAportacion.has(`${y}-${String(m).padStart(2, '0')}`)
-      ) {
-        racha++;
-        m--;
-        if (m === 0) {
-          m = 12;
-          y--;
-        }
-      }
-    }
-
-    return {
-      valor,
-      aportado,
-      valorConCoste,
-      plusvalia,
-      rentabilidad,
-      tir,
-      numAportaciones,
-      ritmo,
-      racha,
-      caida,
-      caidaFecha,
-      serie,
-      serieAportado,
-    };
+    return calcularMetricasCartera(
+      lista,
+      this.todosComponentes().length,
+      this.datos()
+    );
   }
 
   // Filter visibility controls
@@ -574,19 +439,15 @@ export class PortfolioStoreService {
   private async _ejecutarInicializarApp(): Promise<void> {
     this.cargandoInicial.set(true);
     try {
-      const resp = await firstValueFrom(
-        this.http.get<RespuestaAuthYo>('/api/auth/yo')
-      );
-      this.modoAuth.set(resp.modo);
-      this.autenticado.set(resp.autenticado);
-      this.usuario.set(resp.usuario);
+      const resp = await this.auth.consultarSesion();
+      this.auth.establecerSesion(resp.usuario, resp.autenticado, resp.modo);
 
       if (resp.autenticado) {
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
         this.autoActualizarAlEntrar();
       }
     } catch {
-      this.autenticado.set(false);
+      this.auth.limpiarEstado();
     } finally {
       this.cargandoInicial.set(false);
     }
@@ -594,15 +455,9 @@ export class PortfolioStoreService {
 
   async login(email: string, clave: string): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; usuario: Usuario; error?: string }>(
-          '/api/auth/login',
-          { email, clave }
-        )
-      );
+      const resp = await this.auth.login(email, clave);
       if (resp.ok) {
-        this.autenticado.set(true);
-        this.usuario.set(resp.usuario);
+        this.auth.establecerSesion(resp.usuario, true);
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
         this.autoActualizarAlEntrar();
         this.notificarExito(`Bienvenido de nuevo, ${resp.usuario.nombre || resp.usuario.email}`);
@@ -623,15 +478,9 @@ export class PortfolioStoreService {
     clave: string
   ): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; usuario: Usuario; error?: string }>(
-          '/api/auth/registro',
-          { nombre, email, clave }
-        )
-      );
+      const resp = await this.auth.registro(nombre, email, clave);
       if (resp.ok) {
-        this.autenticado.set(true);
-        this.usuario.set(resp.usuario);
+        this.auth.establecerSesion(resp.usuario, true);
         await Promise.all([this.cargarPanel(), this.cargarCarteraConfig()]);
         this.autoActualizarAlEntrar();
         this.notificarExito('Cuenta creada correctamente en Capitalia.');
@@ -653,12 +502,7 @@ export class PortfolioStoreService {
     passwordNueva?: string;
   }): Promise<string | null> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; usuario: Usuario; errores?: string[] }>(
-          '/api/auth/perfil',
-          datos
-        )
-      );
+      const resp = await this.auth.actualizarPerfil(datos);
       if (resp.ok) {
         this.usuario.set(resp.usuario);
         this.notificarExito('Perfil actualizado correctamente.');
@@ -672,9 +516,7 @@ export class PortfolioStoreService {
 
   async solicitarRecuperacion(email: string): Promise<{ ok: boolean; mensaje?: string }> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; mensaje?: string }>('/api/auth/recuperar', { email })
-      );
+      const resp = await this.auth.solicitarRecuperacion(email);
       if (resp.ok) {
         this.errorGlobal.set(null);
         return { ok: true, mensaje: resp.mensaje };
@@ -691,12 +533,7 @@ export class PortfolioStoreService {
 
   async restablecerContrasena(token: string, clave: string): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; mensaje?: string }>('/api/auth/restablecer', {
-          token,
-          clave,
-        })
-      );
+      const resp = await this.auth.restablecerContrasena(token, clave);
       if (resp.ok) {
         this.notificarExito(
           resp.mensaje || 'Contraseña actualizada correctamente. Ya puedes iniciar sesión.'
@@ -714,38 +551,18 @@ export class PortfolioStoreService {
   }
 
   async logout(): Promise<void> {
-    try {
-      await firstValueFrom(this.http.post('/api/auth/logout', {}));
-    } catch {
-      // ignore
-    }
+    await this.auth.logout();
     this.detenerPollingVivo();
     this.preciosVivo.set({});
     this.ultimaActualizacion.set(null);
-    this.autenticado.set(false);
-    this.usuario.set(null);
     this.datos.set(null);
     this.cartera.set(null);
     void this.router.navigate(['/login']);
   }
 
-  // Portfolio & Dashboard API calls
+  // Portfolio & Dashboard API calls (delegated to PortfolioApiService)
   async cargarPanel(): Promise<void> {
-    const resp = await firstValueFrom(
-      this.http.get<
-        | {
-            ok?: boolean;
-            modo?: 'propio' | 'demo' | 'estatico';
-            datos?: DatosPanel | null;
-            panel?: DatosPanel | null;
-            cartera?: CarteraConfig;
-            tipos?: Record<string, [string, string]>;
-            fuentes?: string[];
-            tiposMovimiento?: string[];
-          }
-        | DatosPanel
-      >('/api/panel')
-    );
+    const resp = await this.api.obtenerPanel();
     if (resp && typeof resp === 'object' && ('ok' in resp || 'datos' in resp || 'cartera' in resp)) {
       const env = resp as {
         modo?: 'propio' | 'demo' | 'estatico';
@@ -767,15 +584,7 @@ export class PortfolioStoreService {
   }
 
   async cargarCarteraConfig(): Promise<void> {
-    const resp = await firstValueFrom(
-      this.http.get<{
-        cartera: CarteraConfig;
-        tipos: Record<string, [string, string]>;
-        fuentes: string[];
-        tiposMovimiento: string[];
-        avisos: string[];
-      }>('/api/cartera')
-    );
+    const resp = await this.api.obtenerCarteraConfig();
     this.cartera.set(resp.cartera);
     this.tipos.set(resp.tipos || {});
     this.fuentes.set(resp.fuentes || []);
@@ -945,13 +754,7 @@ export class PortfolioStoreService {
     const d = this.datos();
     if (!d || !this.hayActivosEnVivo()) return;
     try {
-      const resp = await firstValueFrom(
-        this.http.get<{
-          ok: boolean;
-          actualizado?: string;
-          precios?: Record<string, number>;
-        }>('/api/precios-vivo')
-      );
+      const resp = await this.api.obtenerPreciosVivo();
       const precios = resp?.precios || {};
       if (Object.keys(precios).length > 0) {
         this.preciosVivo.set(precios);
@@ -1000,9 +803,7 @@ export class PortfolioStoreService {
     if (this.actualizandoPrecios()) return;
     this.actualizandoPrecios.set(true);
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel | null }>('/api/actualizar', {})
-      );
+      const resp = await this.api.actualizarPrecios();
       this.ultimaSyncFondosMs = Date.now();
       this.aplicarNuevoPanel(resp.panel ?? null);
       if (resp.panel?.preciosActualizados || resp.panel?.generado) {
@@ -1029,17 +830,20 @@ export class PortfolioStoreService {
     titular: string,
     importe: number,
     etiqueta: string,
-    activo: boolean
+    activo: boolean,
+    gastoMensual?: number | null
   ): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>('/api/objetivo', {
-          titular,
-          importe,
-          etiqueta,
-          activo,
-        })
-      );
+      const payload: Record<string, unknown> = {
+        titular,
+        importe,
+        etiqueta,
+        activo,
+      };
+      if (gastoMensual !== undefined) {
+        payload['gastoMensual'] = gastoMensual;
+      }
+      const resp = await this.api.guardarObjetivo(payload);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Objetivo de patrimonio actualizado.');
@@ -1055,12 +859,7 @@ export class PortfolioStoreService {
   async cargarEjemplo(): Promise<void> {
     try {
       this.actualizandoPrecios.set(true);
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>(
-          '/api/cargar-ejemplo',
-          {}
-        )
-      );
+      const resp = await this.api.cargarEjemplo();
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Cartera de ejemplo cargada.');
@@ -1075,9 +874,7 @@ export class PortfolioStoreService {
 
   async empezarConMiCartera(): Promise<void> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>('/api/empezar', {})
-      );
+      const resp = await this.api.empezarConMiCartera();
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.tabActiva.set('datos');
@@ -1092,9 +889,7 @@ export class PortfolioStoreService {
 
   async reiniciarCartera(): Promise<void> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>('/api/reiniciar', {})
-      );
+      const resp = await this.api.reiniciarCartera();
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito(
@@ -1109,23 +904,13 @@ export class PortfolioStoreService {
 
   // CRUD Productos
   async buscarProductos(q: string, tipo = 'todos'): Promise<ResultadoBusqueda[]> {
-    const params: Record<string, string> = { q };
-    if (tipo && tipo !== 'todos') {
-      params['tipo'] = tipo;
-    }
-    const resp = await firstValueFrom(
-      this.http.get<{ resultados: ResultadoBusqueda[] }>('/api/buscar', { params })
-    );
+    const resp = await this.api.buscarProductos(q, tipo);
     return resp.resultados || [];
   }
 
   async obtenerDetalleCarteraModelo(carteraId: string): Promise<ResultadoBusqueda | null> {
     try {
-      const resp = await firstValueFrom(
-        this.http.get<{ ok: boolean; cartera?: ResultadoBusqueda }>(
-          `/api/cartera-modelo/${encodeURIComponent(carteraId)}`
-        )
-      );
+      const resp = await this.api.obtenerDetalleCarteraModelo(carteraId);
       return resp.cartera ?? null;
     } catch (err: unknown) {
       this.notificarError(
@@ -1141,18 +926,12 @@ export class PortfolioStoreService {
   ): Promise<RespuestaLoteProductos | null> {
     const opts = typeof opciones === 'string' ? { entidad: opciones } : opciones || {};
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{
-          ok: boolean;
-          item?: RespuestaLoteProductos;
-          panel: DatosPanel;
-        }>('/api/productos/lote', {
-          productos,
-          entidad: opts.entidad || '',
-          grupoId: opts.grupoId || '',
-          grupoNombre: opts.grupoNombre || '',
-        })
-      );
+      const resp = await this.api.guardarProductosLote({
+        productos,
+        entidad: opts.entidad || '',
+        grupoId: opts.grupoId || '',
+        grupoNombre: opts.grupoNombre || '',
+      });
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       const info: RespuestaLoteProductos = resp.item ?? {
@@ -1187,13 +966,7 @@ export class PortfolioStoreService {
     lineas: LineaLoteCartera[];
   }): Promise<{ guardados: number; reemplazados: number } | null> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{
-          ok: boolean;
-          item?: { guardados: number; reemplazados: number };
-          panel: DatosPanel;
-        }>('/api/movimientos/lote-cartera', payload)
-      );
+      const resp = await this.api.guardarImportesCartera(payload);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       const res = resp.item ?? { guardados: payload.lineas.length, reemplazados: 0 };
@@ -1212,11 +985,7 @@ export class PortfolioStoreService {
 
   async borrarGrupoProductos(grupoId: string, grupoNombre?: string): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.delete<{ ok: boolean; panel: DatosPanel }>(
-          `/api/carteras-grupo/${encodeURIComponent(grupoId)}`
-        )
-      );
+      const resp = await this.api.borrarGrupoProductos(grupoId);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       if (this.grupoSeleccionadoId() === grupoId) {
@@ -1239,7 +1008,7 @@ export class PortfolioStoreService {
   async cargarBancosIniciales(forzar = false): Promise<void> {
     if (!forzar && this.bancosCatalogo().length) return;
     try {
-      const resp = await firstValueFrom(this.http.get<RespuestaBancos>('/api/bancos'));
+      const resp = await this.api.obtenerBancos();
       this.bancosRecientes.set(resp.recientes || []);
       this.bancosCatalogo.set(resp.entidades || []);
     } catch {
@@ -1248,11 +1017,7 @@ export class PortfolioStoreService {
   }
 
   async buscarBancos(q: string): Promise<RespuestaBancos> {
-    const resp = await firstValueFrom(
-      this.http.get<RespuestaBancos>('/api/bancos', {
-        params: { q },
-      })
-    );
+    const resp = await this.api.obtenerBancos(q);
     return {
       recientes: resp.recientes || [],
       entidades: resp.entidades || [],
@@ -1262,7 +1027,7 @@ export class PortfolioStoreService {
 
   async registrarUsoBanco(banco: Partial<EntidadBanco> & { nombre: string }): Promise<void> {
     try {
-      await firstValueFrom(this.http.post<{ ok: boolean }>('/api/bancos/uso', banco));
+      await this.api.registrarUsoBanco(banco);
       await this.cargarBancosIniciales(true);
     } catch {
       // No bloquear si el registro de entidad reciente falla
@@ -1274,16 +1039,7 @@ export class PortfolioStoreService {
     idExistente?: string
   ): Promise<ProductoCfg | null> {
     try {
-      const obs = idExistente
-        ? this.http.put<{ ok: boolean; item?: ProductoCfg; panel: DatosPanel }>(
-            `/api/productos/${encodeURIComponent(idExistente)}`,
-            prod
-          )
-        : this.http.post<{ ok: boolean; item?: ProductoCfg; panel: DatosPanel }>(
-            '/api/productos',
-            prod
-          );
-      const resp = await firstValueFrom(obs);
+      const resp = await this.api.guardarProducto(prod, idExistente);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito(
@@ -1300,11 +1056,7 @@ export class PortfolioStoreService {
 
   async borrarProducto(id: string): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.delete<{ ok: boolean; panel: DatosPanel }>(
-          `/api/productos/${encodeURIComponent(id)}`
-        )
-      );
+      const resp = await this.api.borrarProducto(id);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Producto eliminado.');
@@ -1319,12 +1071,7 @@ export class PortfolioStoreService {
 
   async repartirColores(): Promise<void> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>(
-          '/api/repartir-colores',
-          {}
-        )
-      );
+      const resp = await this.api.repartirColores();
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Colores repartidos automáticamente.');
@@ -1341,16 +1088,7 @@ export class PortfolioStoreService {
     idExistente?: string
   ): Promise<boolean> {
     try {
-      const obs = idExistente
-        ? this.http.put<{ ok: boolean; panel: DatosPanel }>(
-            `/api/movimientos/${encodeURIComponent(idExistente)}`,
-            mov
-          )
-        : this.http.post<{ ok: boolean; panel: DatosPanel }>(
-            '/api/movimientos',
-            mov
-          );
-      const resp = await firstValueFrom(obs);
+      const resp = await this.api.guardarMovimiento(mov, idExistente);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito(
@@ -1367,11 +1105,7 @@ export class PortfolioStoreService {
 
   async borrarMovimiento(id: string): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.delete<{ ok: boolean; panel: DatosPanel }>(
-          `/api/movimientos/${encodeURIComponent(id)}`
-        )
-      );
+      const resp = await this.api.borrarMovimiento(id);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Movimiento eliminado.');
@@ -1392,16 +1126,7 @@ export class PortfolioStoreService {
     idExistente?: string
   ): Promise<boolean> {
     try {
-      const obs = idExistente
-        ? this.http.put<{ ok: boolean; panel: DatosPanel }>(
-            `/api/valoraciones/${encodeURIComponent(idExistente)}`,
-            val
-          )
-        : this.http.post<{ ok: boolean; panel: DatosPanel }>(
-            '/api/valoraciones',
-            val
-          );
-      const resp = await firstValueFrom(obs);
+      const resp = await this.api.guardarValoracion(val, idExistente);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Saldos guardados correctamente.');
@@ -1416,11 +1141,7 @@ export class PortfolioStoreService {
 
   async borrarValoracion(id: string): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.delete<{ ok: boolean; panel: DatosPanel }>(
-          `/api/valoraciones/${encodeURIComponent(id)}`
-        )
-      );
+      const resp = await this.api.borrarValoracion(id);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Saldo eliminado.');
@@ -1438,12 +1159,7 @@ export class PortfolioStoreService {
     payload: Record<string, unknown>
   ): Promise<InformeImportacion | null> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; informe: InformeImportacion }>(
-          '/api/importar/previsualizar',
-          payload
-        )
-      );
+      const resp = await this.api.previsualizarImportacion(payload);
       return resp.informe;
     } catch (err: unknown) {
       this.notificarError(
@@ -1457,13 +1173,7 @@ export class PortfolioStoreService {
     payload: Record<string, unknown>
   ): Promise<InformeImportacion | null> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{
-          ok: boolean;
-          informe: InformeImportacion;
-          panel: DatosPanel;
-        }>('/api/importar/confirmar', payload)
-      );
+      const resp = await this.api.confirmarImportacion(payload);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await this.cargarCarteraConfig();
       this.notificarExito('Importación completada con éxito.');
@@ -1477,17 +1187,13 @@ export class PortfolioStoreService {
   }
 
   async obtenerPromptIA(): Promise<string> {
-    const resp = await firstValueFrom(
-      this.http.get<{ prompt: string }>('/api/prompt')
-    );
+    const resp = await this.api.obtenerPromptIA();
     return resp.prompt || '';
   }
 
   async cargarCopias(): Promise<void> {
     try {
-      const resp = await firstValueFrom(
-        this.http.get<{ copias: CopiaSeguridad[] }>('/api/copias')
-      );
+      const resp = await this.api.obtenerCopias();
       this.copias.set(resp.copias || []);
     } catch {
       this.copias.set([]);
@@ -1496,11 +1202,7 @@ export class PortfolioStoreService {
 
   async subirCopia(contenido: unknown): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>('/api/copia/subir', {
-          contenido,
-        })
-      );
+      const resp = await this.api.subirCopia(contenido);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await Promise.all([this.cargarCarteraConfig(), this.cargarCopias()]);
       this.notificarExito('Copia de seguridad restaurada.');
@@ -1515,12 +1217,7 @@ export class PortfolioStoreService {
 
   async recuperarCopia(archivo: string): Promise<boolean> {
     try {
-      const resp = await firstValueFrom(
-        this.http.post<{ ok: boolean; panel: DatosPanel }>(
-          '/api/copia/recuperar',
-          { archivo }
-        )
-      );
+      const resp = await this.api.recuperarCopia(archivo);
       this.aplicarNuevoPanel(resp.panel ?? null);
       await Promise.all([this.cargarCarteraConfig(), this.cargarCopias()]);
       this.notificarExito('Copia automática restaurada.');

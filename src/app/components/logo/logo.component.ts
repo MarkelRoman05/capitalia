@@ -1,7 +1,8 @@
-import { Component, input } from '@angular/core';
+import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 
 @Component({
   selector: 'cap-logo',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   styles: [
     `
       :host {

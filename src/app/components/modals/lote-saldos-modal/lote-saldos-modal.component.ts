@@ -1,10 +1,11 @@
-import { Component, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, ChangeDetectorRef, Component, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-lote-saldos-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrarSiAbierto()',
@@ -104,6 +105,7 @@ import { IconComponent } from '../../icon/icon.component';
 })
 export class LoteSaldosModalComponent {
   readonly store = inject(PortfolioStoreService);
+  private readonly cdr = inject(ChangeDetectorRef);
 
   readonly abierto = input.required<boolean>();
   readonly cerrar = output<void>();
@@ -134,6 +136,7 @@ export class LoteSaldosModalComponent {
             valor: Math.abs(comp ? comp.valor : 0),
           };
         });
+        this.cdr.markForCheck();
       }
     });
   }

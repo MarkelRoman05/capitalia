@@ -1,10 +1,11 @@
-import { Component, effect, inject, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 import { IconComponent } from '../../icon/icon.component';
 
 @Component({
   selector: 'cap-objetivo-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrar()',
@@ -66,6 +67,19 @@ import { IconComponent } from '../../icon/icon.component';
               />
             </div>
 
+            <div class="campo">
+              <label for="obj-gasto">Gasto mensual medio (€/mes, opcional)</label>
+              <input
+                id="obj-gasto"
+                type="number"
+                step="50"
+                min="0"
+                [(ngModel)]="objGastoMensual"
+                name="gastoMensual"
+                placeholder="Ej. 1800 (para calcular meses de colchón)"
+              />
+            </div>
+
             <label class="check-row" style="margin-bottom: 0.75rem">
               <input type="checkbox" [(ngModel)]="objActivo" name="activo" />
               <span>Mostrar barra de progreso en la cabecera de Patrimonio</span>
@@ -95,6 +109,7 @@ export class ObjetivoModalComponent {
   objTitular = '';
   objEtiqueta = '';
   objImporte = 100000;
+  objGastoMensual: number | null = null;
   objActivo = true;
 
   constructor() {
@@ -102,10 +117,13 @@ export class ObjetivoModalComponent {
       if (this.store.modalObjetivoAbierto()) {
         this.guardando.set(false);
         const d = this.store.datos();
+        const c = this.store.cartera();
         const obj = d?.objetivo;
         this.objTitular = d?.titular || 'Mi cartera';
         this.objEtiqueta = obj?.etiqueta || 'Objetivo de patrimonio';
         this.objImporte = obj?.importe || 100000;
+        const gasto = c?.gastoMensual ?? d?.salud?.gastoMensual ?? null;
+        this.objGastoMensual = gasto !== null && gasto > 0 ? gasto : null;
         this.objActivo = obj ? obj.activo : true;
       }
     });
@@ -119,11 +137,17 @@ export class ObjetivoModalComponent {
     if (this.guardando()) return;
     this.guardando.set(true);
     try {
+      const gastoRaw = this.objGastoMensual;
+      const gasto =
+        gastoRaw !== null && gastoRaw !== undefined && Number(gastoRaw) > 0
+          ? Number(gastoRaw)
+          : null;
       const ok = await this.store.guardarObjetivo(
         this.objTitular.trim() || 'Mi cartera',
         Number(this.objImporte) || 100000,
         this.objEtiqueta.trim() || 'Objetivo de patrimonio',
         this.objActivo,
+        gasto,
       );
       if (ok) {
         this.cerrar();

@@ -18,5 +18,14 @@ export CAPITALIA_HOST="${CAPITALIA_HOST:-127.0.0.1}"
 export CAPITALIA_PUERTO="${CAPITALIA_PUERTO:-8766}"
 export CAPITALIA_NO_ABRIR=1
 
+if [ "${CAPITALIA_WSGI:-}" = "gunicorn" ]; then
+  if ./.venv/bin/python -c "import gunicorn" 2>/dev/null; then
+    echo "Iniciando Capitalia con Gunicorn en http://${CAPITALIA_HOST}:${CAPITALIA_PUERTO} ..."
+    exec ./.venv/bin/gunicorn -w "${CAPITALIA_WORKERS:-2}" --threads "${CAPITALIA_THREADS:-4}" -b "${CAPITALIA_HOST}:${CAPITALIA_PUERTO}" backend.servidor:app
+  else
+    echo "Gunicorn no está instalado en .venv; usando servidor integrado..."
+  fi
+fi
+
 echo "Iniciando Capitalia en http://${CAPITALIA_HOST}:${CAPITALIA_PUERTO} ..."
 exec ./.venv/bin/python -m backend

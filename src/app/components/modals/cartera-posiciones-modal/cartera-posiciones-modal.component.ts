@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { ChangeDetectionStrategy, Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PortfolioStoreService } from '../../../services/portfolio-store.service';
 import { FormatService } from '../../../services/format.service';
@@ -19,6 +19,7 @@ interface FilaPosicionCartera {
 
 @Component({
   selector: 'cap-cartera-posiciones-modal',
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [FormsModule, IconComponent],
   host: {
     '(document:keydown.escape)': 'cerrarSiAbierto()',

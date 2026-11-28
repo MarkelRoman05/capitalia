@@ -1,15 +1,25 @@
-import { Component, inject } from '@angular/core';
+import { ChangeDetectionStrategy, Component, inject } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { PortfolioStoreService } from '../../services/portfolio-store.service';
 import { NavbarComponent } from '../navbar/navbar.component';
 import { FooterComponent } from '../footer/footer.component';
 import { ConfirmModalComponent } from '../modals/confirm-modal/confirm-modal.component';
 import { PerfilModalComponent } from '../modals/perfil-modal/perfil-modal.component';
+import { AyudaModalComponent } from '../modals/ayuda-modal/ayuda-modal.component';
 import { IconComponent } from '../icon/icon.component';
 
 @Component({
   selector: 'cap-shell',
-  imports: [RouterOutlet, NavbarComponent, FooterComponent, ConfirmModalComponent, PerfilModalComponent, IconComponent],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [
+    RouterOutlet,
+    NavbarComponent,
+    FooterComponent,
+    ConfirmModalComponent,
+    PerfilModalComponent,
+    AyudaModalComponent,
+    IconComponent,
+  ],
   template: `
     <div class="app-shell">
       <cap-navbar />
@@ -74,6 +84,7 @@ import { IconComponent } from '../icon/icon.component';
 
     <cap-confirm-modal />
     <cap-perfil-modal />
+    <cap-ayuda-modal />
   `,
 })
 export class ShellComponent {
